@@ -1,9 +1,80 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import Header from "./Header";
 
+interface Question {
+  id: string;
+  title: string;
+  author_id: string;
+  created_at: string;
+  score: number;
+}
+
+interface User {
+  id: string;
+  username: string;
+}
+
 export default function HomePage() {
+  const supabase = createClientComponentClient();
+  const router = useRouter();
+
+  const [questions, setQuestions] = useState<(Question & { username?: string })[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const handleAskQuestion = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user?.id) {
+      router.push("/question/ask"); // logged in
+    } else {
+      router.push("/login"); // not logged in
+    }
+  };
+
+  useEffect(() => {
+    const fetchTopQuestions = async () => {
+      setLoading(true);
+      try {
+        // Fetch latest 5 questions
+        const { data: questionsData, error: qError } = await supabase
+          .from("questions")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(5);
+
+        if (qError || !questionsData) throw qError;
+
+        // Fetch author usernames
+        const usersMap: Record<string, string> = {};
+        const { data: usersData } = await supabase
+          .from("users")
+          .select("id, username");
+
+        if (usersData) {
+          usersData.forEach(u => usersMap[u.id] = u.username);
+        }
+
+        // Map username to questions
+        const questionsWithUsername = questionsData.map(q => ({
+          ...q,
+          username: usersMap[q.author_id] || "Unknown",
+        }));
+
+        setQuestions(questionsWithUsername);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTopQuestions();
+  }, []);
+
   return (
     <>
       <Header />
@@ -16,7 +87,7 @@ export default function HomePage() {
                 Find answers. Share knowledge. Build reputation.
               </h2>
               <p className="mt-4 text-slate-600">
-                QueryLoop is a modern Q&amp;A platform inspired by the classic developer
+                QueryLoop is a modern Q&A platform inspired by the classic developer
                 communities. Post questions, provide helpful answers, and grow your
                 profile.
               </p>
@@ -36,12 +107,12 @@ export default function HomePage() {
               </form>
 
               <div className="mt-6 flex flex-wrap gap-3">
-                <Link
-                  href="/questions/ask"
+                <button
+                  onClick={handleAskQuestion}
                   className="text-sm bg-white border border-slate-200 px-3 py-2 rounded-md hover:shadow"
                 >
                   Ask a question
-                </Link>
+                </button>
                 <Link
                   href="/tags"
                   className="text-sm px-3 py-2 rounded-md bg-indigo-50 text-indigo-700"
@@ -54,35 +125,26 @@ export default function HomePage() {
             <div className="space-y-4">
               <div className="p-4 bg-white rounded-lg shadow-sm border border-slate-100">
                 <h3 className="text-lg font-semibold">Top questions</h3>
-                <ul className="mt-3 space-y-3">
-                  <li className="flex items-start gap-3">
-                    <div className="text-xs text-slate-500 w-14">92 votes</div>
-                    <div>
-                      <Link href="/questions/1" className="font-medium hover:underline">
-                        How to optimize complex SQL queries in Postgres?
-                      </Link>
-                      <p className="text-sm text-slate-500">Tags: sql postgresql performance</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <div className="text-xs text-slate-500 w-14">48 answers</div>
-                    <div>
-                      <Link href="/questions/2" className="font-medium hover:underline">
-                        Best practices for designing REST APIs in 2025
-                      </Link>
-                      <p className="text-sm text-slate-500">Tags: api design rest</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <div className="text-xs text-slate-500 w-14">17 views</div>
-                    <div>
-                      <Link href="/questions/3" className="font-medium hover:underline">
-                        Next.js app router: server vs client components
-                      </Link>
-                      <p className="text-sm text-slate-500">Tags: nextjs react</p>
-                    </div>
-                  </li>
-                </ul>
+
+                {loading ? (
+                  <p className="mt-3 text-sm text-slate-500">Loading...</p>
+                ) : (
+                  <ul className="mt-3 space-y-3">
+                    {questions.map((q) => (
+                      <li key={q.id} className="flex items-start gap-3">
+                        <div className="text-xs text-slate-500 w-14">{q.score} votes</div>
+                        <div>
+                          <Link href={`/question/${q.id}`} className="font-medium hover:underline">
+                            {q.title}
+                          </Link>
+                          <p className="text-sm text-slate-500">
+                            Asked by {q.username} on {new Date(q.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               <div className="p-4 rounded-lg bg-gradient-to-r from-indigo-50 to-purple-50 border border-transparent">
