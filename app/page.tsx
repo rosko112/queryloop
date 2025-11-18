@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import Header from "./Header";
+import Header from "@/app/components/Header";
 
 interface Question {
   id: string;
@@ -29,9 +29,9 @@ export default function HomePage() {
   const handleAskQuestion = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user?.id) {
-      router.push("/question/ask"); // logged in
+      router.push("/question/ask"); 
     } else {
-      router.push("/login"); // not logged in
+      router.push("/login"); 
     }
   };
 
@@ -39,7 +39,6 @@ export default function HomePage() {
     const fetchTopQuestions = async () => {
       setLoading(true);
       try {
-        // Fetch latest 5 questions
         const { data: questionsData, error: qError } = await supabase
           .from("questions")
           .select("*")
@@ -48,7 +47,6 @@ export default function HomePage() {
 
         if (qError || !questionsData) throw qError;
 
-        // Fetch author usernames
         const usersMap: Record<string, string> = {};
         const { data: usersData } = await supabase
           .from("users")
@@ -58,7 +56,6 @@ export default function HomePage() {
           usersData.forEach(u => usersMap[u.id] = u.username);
         }
 
-        // Map username to questions
         const questionsWithUsername = questionsData.map(q => ({
           ...q,
           username: usersMap[q.author_id] || "Unknown",

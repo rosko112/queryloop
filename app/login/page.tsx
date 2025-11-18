@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import Header from "../Header";
+import Header from "@/app/components/Header";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,12 +16,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ✅ Redirect logged-in users to homepage
   useEffect(() => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        router.push("/"); // redirect to homepage
+        router.push("/"); 
       }
     };
     checkUser();
@@ -37,7 +36,6 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      // 1️⃣ Sign in via Supabase Auth
       const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
@@ -55,7 +53,6 @@ export default function LoginPage() {
 
       const userId = authData.user.id;
 
-      // 2️⃣ Fetch user profile from your "users" table
       const { data: profile, error: profileError } = await supabase
         .from("users")
         .select("*")
@@ -67,10 +64,6 @@ export default function LoginPage() {
         return;
       }
 
-      // You now have `profile.username`, `profile.reputation`, etc.
-      // You can store it in context or state if needed
-
-      // 3️⃣ Redirect to home
       router.push("/");
     } catch (err: any) {
       setError(err?.message || "Network error");

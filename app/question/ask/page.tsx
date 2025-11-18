@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
-import Header from "../../Header";
+import Header from "@/app/components/Header";
+import heic2any from 'heic2any';
 
 export default function AskQuestionForm() {
   const supabase = createClientComponentClient();
@@ -28,9 +29,47 @@ export default function AskQuestionForm() {
     return () => newPreviews.forEach((url) => URL.revokeObjectURL(url));
   }, [files]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setFiles(Array.from(e.target.files));
+  const convertHeicToJpg = async (file: File): Promise<File> => {
+    if (file.type !== 'image/heic' && !file.name.toLowerCase().endsWith('.heic')) {
+      return file; // Return as-is if not HEIC
+    }
+
+    try {
+      // Convert HEIC to JPEG blob
+      const jpegBlob = await heic2any({
+        blob: file,
+        toType: 'image/jpeg',
+        quality: 0.8
+      }) as Blob;
+
+      // Create new file with JPEG extension
+      const newFileName = file.name.replace(/\.heic$/i, '.jpg');
+      return new File([jpegBlob], newFileName, { type: 'image/jpeg' });
+    } catch (error) {
+      console.error('HEIC conversion failed:', error);
+      throw new Error('Failed to convert HEIC image to JPEG');
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+
+    const convertedFiles: File[] = [];
+    
+    try {
+      // Convert all HEIC files to JPEG
+      for (const file of Array.from(e.target.files)) {
+        if (file.type === 'image/heic' || file.name.toLowerCase().endsWith('.heic')) {
+          const convertedFile = await convertHeicToJpg(file);
+          convertedFiles.push(convertedFile);
+        } else {
+          convertedFiles.push(file);
+        }
+      }
+      
+      setFiles(convertedFiles);
+    } catch (error: any) {
+      setError(error.message || 'Failed to process images');
     }
   };
 
@@ -61,14 +100,29 @@ export default function AskQuestionForm() {
 
       const questionId = questionData.id;
 
-      // Upload files to storage
+      // Upload files to storage AND insert into question_attachments table
       if (files.length > 0) {
         for (const file of files) {
+          const filePath = `${questionId}/${file.name}`;
+          
+          // 1. Upload to storage
           const { error: uploadError } = await supabase.storage
             .from("questions-files")
-            .upload(`${questionId}/${file.name}`, file);
+            .upload(filePath, file);
 
           if (uploadError) throw uploadError;
+
+          // 2. INSERT INTO question_attachments TABLE
+          const { error: attachError } = await supabase
+            .from("question_attachments")
+            .insert([
+              { 
+                question_id: questionId, 
+                file_path: filePath 
+              }
+            ]);
+
+          if (attachError) throw attachError;
         }
       }
 
@@ -127,11 +181,12 @@ export default function AskQuestionForm() {
               <div className="flex flex-col gap-6">
                 <div>
                   <label className="block text-sm font-medium text-slate-700">
-                    Attachments
+                    Attachments (HEIC files will be converted to JPG automatically)
                   </label>
                   <input
                     type="file"
                     multiple
+                    accept="image/*,.heic,.HEIC"
                     onChange={handleFileChange}
                     className="mt-2 w-full"
                   />

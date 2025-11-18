@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import Header from "../Header";
+import Header from "@/app/components/Header";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -21,12 +21,11 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ✅ Redirect logged-in users to homepage
   useEffect(() => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        router.push("/"); // redirect to homepage
+        router.push("/"); 
       }
     };
     checkUser();
@@ -61,12 +60,11 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      // 1️⃣ Sign up user with Supabase Auth
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: formData.email.trim(),
         password: formData.password,
         options: {
-          data: { username: formData.username.trim() }, // store username in user_metadata
+          data: { username: formData.username.trim() }, 
         },
       });
 
@@ -82,7 +80,6 @@ export default function RegisterPage() {
 
       const userId = authData.user.id;
 
-      // 2️⃣ Insert user profile into your users table (without password)
       const { error: dbError } = await supabase.from("users").insert({
         id: userId,
         username: formData.username.trim(),
@@ -95,7 +92,6 @@ export default function RegisterPage() {
         return;
       }
 
-      // 3️⃣ Redirect to home
       router.push("/");
     } catch (err: any) {
       setError(err?.message || "Network error");

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import Header from "../../Header";
+import Header from "@/app/components/Header";
 
 interface Question {
   id: string;
@@ -14,7 +14,7 @@ interface Question {
   updated_at: string;
   score: number;
   is_closed: boolean;
-  is_public: boolean;
+  is_public: true;
 }
 
 interface User {
@@ -28,6 +28,18 @@ interface Answer {
   author_id: string;
   created_at: string;
   score: number;
+  attachments?: AnswerAttachment[];
+}
+
+interface Attachment {
+  id: string;
+  file_path: string;
+}
+
+interface AnswerAttachment {
+  id: string;
+  file_path: string;
+  answer_id: string;
 }
 
 export default function QuestionPage() {
@@ -39,12 +51,24 @@ export default function QuestionPage() {
   const [question, setQuestion] = useState<Question | null>(null);
   const [author, setAuthor] = useState<User | null>(null);
   const [answers, setAnswers] = useState<Answer[]>([]);
-  const [attachments, setAttachments] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [userVotes, setUserVotes] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ✅ Load question, author, answers, and attachments
+  // Function to get the correct image URL
+  const getImageUrl = (filePath: string) => {
+    // Get the Supabase URL from the client
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    return `${supabaseUrl}/storage/v1/object/public/questions-files/${filePath}`;
+  };
+
+  // Function to get answer image URL
+  const getAnswerImageUrl = (filePath: string) => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    return `${supabaseUrl}/storage/v1/object/public/answer-files/${filePath}`;
+  };
+
   useEffect(() => {
     if (!questionId) return;
 
@@ -53,6 +77,7 @@ export default function QuestionPage() {
       setError(null);
 
       try {
+        // Fetch question
         const { data: qData, error: qError } = await supabase
           .from("questions")
           .select("*")
@@ -65,6 +90,7 @@ export default function QuestionPage() {
         }
         setQuestion(qData);
 
+        // Fetch author
         const { data: userData } = await supabase
           .from("users")
           .select("id, username")
@@ -72,27 +98,39 @@ export default function QuestionPage() {
           .maybeSingle();
         setAuthor(userData || null);
 
+        // Fetch answers with their attachments
         const { data: answersData } = await supabase
           .from("answers")
           .select("*")
           .eq("question_id", questionId)
           .order("created_at", { ascending: true });
-        setAnswers(answersData || []);
 
-        const { data: files } = await supabase.storage
-          .from("questions-files")
-          .list(`${questionId}/`);
+        // Fetch attachments for each answer
+        const answersWithAttachments = await Promise.all(
+          (answersData || []).map(async (answer) => {
+            const { data: answerAttachments } = await supabase
+              .from("answer_attachments")
+              .select("*")
+              .eq("answer_id", answer.id);
+            
+            return {
+              ...answer,
+              attachments: answerAttachments || []
+            };
+          })
+        );
 
-        if (files) {
-          const urls = await Promise.all(
-            files.map(async (file) => {
-              const { data: signedData } = await supabase.storage
-                .from("questions-files")
-                .createSignedUrl(`${questionId}/${file.name}`, 60 * 60);
-              return signedData?.signedUrl;
-            })
-          );
-          setAttachments(urls.filter(Boolean) as string[]);
+        setAnswers(answersWithAttachments);
+
+        const { data: attachmentsData, error: attachmentsError } = await supabase
+          .from("question_attachments")
+          .select("*")
+          .eq("question_id", questionId);
+        
+        if (attachmentsError) {
+          console.error('Error fetching attachments:', attachmentsError);
+        } else {
+          setAttachments(attachmentsData || []);
         }
       } catch (err: any) {
         setError(err.message || "Failed to load question.");
@@ -104,7 +142,6 @@ export default function QuestionPage() {
     fetchData();
   }, [questionId, supabase]);
 
-  // ✅ Voting system with per-session limit
   const voteAnswer = async (answerId: string, delta: number) => {
     const { data: sessionData } = await supabase.auth.getSession();
     const user = sessionData?.session?.user;
@@ -127,7 +164,6 @@ export default function QuestionPage() {
         .from("answers")
         .update({ score: answer.score + delta })
         .eq("id", answerId);
-
       if (error) throw error;
 
       setAnswers((prev) =>
@@ -144,6 +180,12 @@ export default function QuestionPage() {
   if (loading) return <p className="pt-24 text-center">Loading...</p>;
   if (error) return <p className="pt-24 text-center text-red-600">{error}</p>;
   if (!question) return <p className="pt-24 text-center">Question not found.</p>;
+  
+  if (attachments.length > 0) {
+    attachments.forEach(att => {
+      const fullUrl = getImageUrl(att.file_path);
+    });
+  }
 
   return (
     <>
@@ -172,21 +214,24 @@ export default function QuestionPage() {
               <div className="mt-6">
                 <h2 className="font-medium mb-2">Attachments</h2>
                 <div className="flex flex-wrap gap-4">
-                  {attachments.map((url, idx) => (
-                    <a
-                      key={idx}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-32 h-32 border rounded-md overflow-hidden flex items-center justify-center text-sm text-slate-600"
-                    >
-                      <img
-                        src={url}
-                        alt={`attachment-${idx}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </a>
-                  ))}
+                  {attachments.map((att) => {
+                    const imageUrl = getImageUrl(att.file_path);
+                    return (
+                      <a
+                        key={att.id}
+                        href={imageUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-400px h-400px border rounded-md overflow-hidden flex items-center justify-center text-sm text-slate-600"
+                      >
+                        <img
+                          src={imageUrl}
+                          alt={`attachment-${att.id}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </a>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -208,18 +253,44 @@ export default function QuestionPage() {
             </div>
           </div>
 
-          {/* ✅ Answers Section */}
           {answers.length > 0 && (
-            <div className="mt-12 bg-white rounded-xl shadow p-8 border border-slate-100">
-              <h2 className="text-2xl font-semibold mb-6">Answers</h2>
-              {answers.map((answer) => (
-                <div
-                  key={answer.id}
-                  className="mb-6 border-b border-slate-200 pb-4"
-                >
-                  <p className="text-slate-700 whitespace-pre-wrap">
-                    {answer.body}
-                  </p>
+  <div className="mt-12 bg-white rounded-xl shadow p-8 border border-slate-100">
+    <h2 className="text-2xl font-semibold mb-6">Answers</h2>
+    {answers.map((answer) => (
+      <div
+        key={answer.id}
+        className="mb-6 border-b border-slate-200 pb-4"
+      >
+        <p className="text-slate-700 whitespace-pre-wrap">
+          {answer.body}
+        </p>
+
+        {answer.attachments && answer.attachments.length > 0 && (
+          <div className="mt-4">
+            <h3 className="text-sm font-medium text-slate-600 mb-2">Attachments:</h3>
+            <div className="flex flex-wrap gap-4">
+              {answer.attachments.map((att) => {
+                const imageUrl = getAnswerImageUrl(att.file_path);
+                return (
+                  <a
+                    key={att.id}
+                    href={imageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-32 h-32 border rounded-md overflow-hidden flex items-center justify-center text-sm text-slate-600"
+                  >
+                    <img
+                      src={imageUrl}
+                      alt={`Answer attachment ${att.id}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
                   <div className="mt-2 flex items-center gap-3 text-sm text-slate-500">
                     <span>
                       Posted: {new Date(answer.created_at).toLocaleString()}
