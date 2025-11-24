@@ -20,6 +20,13 @@ interface Question {
 interface User {
   id: string;
   username: string;
+  display_name?: string;
+}
+
+interface AnswerAttachment {
+  id: string;
+  file_path: string;
+  answer_id: string;
 }
 
 interface Answer {
@@ -28,18 +35,14 @@ interface Answer {
   author_id: string;
   created_at: string;
   score: number;
-  attachments?: AnswerAttachment[];
+  attachments: AnswerAttachment[];
+  author: User | null;
 }
 
-interface Attachment {
+interface QuestionAttachment {
   id: string;
   file_path: string;
-}
-
-interface AnswerAttachment {
-  id: string;
-  file_path: string;
-  answer_id: string;
+  question_id: string;
 }
 
 export default function QuestionPage() {
@@ -51,23 +54,29 @@ export default function QuestionPage() {
   const [question, setQuestion] = useState<Question | null>(null);
   const [author, setAuthor] = useState<User | null>(null);
   const [answers, setAnswers] = useState<Answer[]>([]);
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [userVotes, setUserVotes] = useState<Record<string, boolean>>({});
+  const [questionAttachments, setQuestionAttachments] = useState<QuestionAttachment[]>([]);
+  const [userVotes, setUserVotes] = useState<Record<string, 1 | -1 | 0>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Function to get the correct image URL
-  const getImageUrl = (filePath: string) => {
-    // Get the Supabase URL from the client
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    return `${supabaseUrl}/storage/v1/object/public/questions-files/${filePath}`;
+  const getImageUrl = (filePath: string) =>
+    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/questions-files/${filePath}`;
+  const getAnswerImageUrl = (filePath: string) =>
+    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/answer-files/${filePath}`;
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
-  // Function to get answer image URL
-  const getAnswerImageUrl = (filePath: string) => {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    return `${supabaseUrl}/storage/v1/object/public/answer-files/${filePath}`;
-  };
+  const getDisplayName = (user: User | null | undefined) =>
+    user ? user.display_name || user.username : "Unknown User";
 
   useEffect(() => {
     if (!questionId) return;
@@ -90,48 +99,54 @@ export default function QuestionPage() {
         }
         setQuestion(qData);
 
-        // Fetch author
+        // Fetch question author
         const { data: userData } = await supabase
           .from("users")
-          .select("id, username")
+          .select("id, username, display_name")
           .eq("id", qData.author_id)
           .maybeSingle();
         setAuthor(userData || null);
 
-        // Fetch answers with their attachments
+        // Fetch answers
         const { data: answersData } = await supabase
           .from("answers")
           .select("*")
           .eq("question_id", questionId)
           .order("created_at", { ascending: true });
+        const answerList = answersData || [];
 
-        // Fetch attachments for each answer
-        const answersWithAttachments = await Promise.all(
-          (answersData || []).map(async (answer) => {
-            const { data: answerAttachments } = await supabase
+        // Fetch answer authors
+        const authorIds = [...new Set(answerList.map(a => a.author_id))];
+        const { data: answerAuthors } = await supabase
+          .from("users")
+          .select("id, username, display_name")
+          .in("id", authorIds);
+        const authorsMap = new Map<string, User>();
+        (answerAuthors || []).forEach(a => authorsMap.set(a.id, a));
+
+        // Fetch attachments
+        const answersWithDetails: Answer[] = await Promise.all(
+          answerList.map(async (a) => {
+            const { data: attachmentsData } = await supabase
               .from("answer_attachments")
               .select("*")
-              .eq("answer_id", answer.id);
-            
+              .eq("answer_id", a.id);
             return {
-              ...answer,
-              attachments: answerAttachments || []
+              ...a,
+              author: authorsMap.get(a.author_id) || null,
+              attachments: attachmentsData || [],
             };
           })
         );
+        setAnswers(answersWithDetails);
 
-        setAnswers(answersWithAttachments);
-
-        const { data: attachmentsData, error: attachmentsError } = await supabase
+        // Fetch question attachments
+        const { data: qAttachments } = await supabase
           .from("question_attachments")
           .select("*")
           .eq("question_id", questionId);
-        
-        if (attachmentsError) {
-          console.error('Error fetching attachments:', attachmentsError);
-        } else {
-          setAttachments(attachmentsData || []);
-        }
+        setQuestionAttachments(qAttachments || []);
+
       } catch (err: any) {
         setError(err.message || "Failed to load question.");
       } finally {
@@ -142,36 +157,34 @@ export default function QuestionPage() {
     fetchData();
   }, [questionId, supabase]);
 
-  const voteAnswer = async (answerId: string, delta: number) => {
+  // Vote function: supports upvote, downvote, and switching
+  const voteAnswer = async (answerId: string, vote: 1 | -1) => {
     const { data: sessionData } = await supabase.auth.getSession();
     const user = sessionData?.session?.user;
+    if (!user) return alert("You must be logged in to vote.");
 
-    if (!user) {
-      alert("You must be logged in to vote.");
-      return;
+    const currentVote = userVotes[answerId] || 0;
+
+    if (currentVote === vote) {
+      return alert("You already voted this way.");
     }
 
-    if (userVotes[answerId]) {
-      alert("You already voted on this answer.");
-      return;
-    }
+    const answer = answers.find(a => a.id === answerId);
+    if (!answer) return;
 
+    const scoreChange = vote - currentVote; // +1 if upvote, -1 if downvote, +2/-2 if switching
     try {
-      const answer = answers.find((a) => a.id === answerId);
-      if (!answer) return;
-
       const { error } = await supabase
         .from("answers")
-        .update({ score: answer.score + delta })
+        .update({ score: answer.score + scoreChange })
         .eq("id", answerId);
       if (error) throw error;
 
-      setAnswers((prev) =>
-        prev.map((a) =>
-          a.id === answerId ? { ...a, score: a.score + delta } : a
-        )
+      setAnswers(prev =>
+        prev.map(a => (a.id === answerId ? { ...a, score: a.score + scoreChange } : a))
       );
-      setUserVotes((prev) => ({ ...prev, [answerId]: true }));
+
+      setUserVotes(prev => ({ ...prev, [answerId]: vote }));
     } catch (err: any) {
       alert("Failed to vote: " + err.message);
     }
@@ -180,12 +193,6 @@ export default function QuestionPage() {
   if (loading) return <p className="pt-24 text-center">Loading...</p>;
   if (error) return <p className="pt-24 text-center text-red-600">{error}</p>;
   if (!question) return <p className="pt-24 text-center">Question not found.</p>;
-  
-  if (attachments.length > 0) {
-    attachments.forEach(att => {
-      const fullUrl = getImageUrl(att.file_path);
-    });
-  }
 
   return (
     <>
@@ -194,44 +201,35 @@ export default function QuestionPage() {
         <section className="max-w-5xl mx-auto px-6 py-12">
           <div className="bg-white rounded-xl shadow-lg p-10 border border-slate-100">
             <h1 className="text-3xl font-bold mb-4">{question.title}</h1>
-
             <div className="flex items-center text-sm text-slate-500 mb-6">
               <span>
-                Asked by <strong>{author?.username || question.author_id}</strong>
+                Asked by <strong>{getDisplayName(author)}</strong>
               </span>
               <span className="mx-2">|</span>
-              <span>{new Date(question.created_at).toLocaleString()}</span>
-              {question.is_closed && (
-                <span className="ml-4 text-red-600 font-semibold">Closed</span>
-              )}
+              <span>{formatDate(question.created_at)}</span>
+              {question.is_closed && <span className="ml-4 text-red-600 font-semibold">Closed</span>}
             </div>
+            <p className="text-lg text-slate-700 whitespace-pre-wrap">{question.body}</p>
 
-            <p className="text-lg text-slate-700 whitespace-pre-wrap">
-              {question.body}
-            </p>
-
-            {attachments.length > 0 && (
+            {questionAttachments.length > 0 && (
               <div className="mt-6">
                 <h2 className="font-medium mb-2">Attachments</h2>
                 <div className="flex flex-wrap gap-4">
-                  {attachments.map((att) => {
-                    const imageUrl = getImageUrl(att.file_path);
-                    return (
-                      <a
-                        key={att.id}
-                        href={imageUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-400px h-400px border rounded-md overflow-hidden flex items-center justify-center text-sm text-slate-600"
-                      >
-                        <img
-                          src={imageUrl}
-                          alt={`attachment-${att.id}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </a>
-                    );
-                  })}
+                  {questionAttachments.map(att => (
+                    <a
+                      key={att.id}
+                      href={getImageUrl(att.file_path)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-32 h-32 border rounded-md overflow-hidden flex items-center justify-center text-sm text-slate-600"
+                    >
+                      <img
+                        src={getImageUrl(att.file_path)}
+                        alt={`attachment-${att.id}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </a>
+                  ))}
                 </div>
               </div>
             )}
@@ -243,7 +241,6 @@ export default function QuestionPage() {
               >
                 Back
               </button>
-
               <button
                 onClick={() => router.push(`/question/${questionId}/answer`)}
                 className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
@@ -254,62 +251,61 @@ export default function QuestionPage() {
           </div>
 
           {answers.length > 0 && (
-  <div className="mt-12 bg-white rounded-xl shadow p-8 border border-slate-100">
-    <h2 className="text-2xl font-semibold mb-6">Answers</h2>
-    {answers.map((answer) => (
-      <div
-        key={answer.id}
-        className="mb-6 border-b border-slate-200 pb-4"
-      >
-        <p className="text-slate-700 whitespace-pre-wrap">
-          {answer.body}
-        </p>
+            <div className="mt-12 bg-white rounded-xl shadow p-8 border border-slate-100">
+              <h2 className="text-2xl font-semibold mb-6">Answers ({answers.length})</h2>
+              {answers.map(answer => (
+                <div key={answer.id} className="mb-8 border-b border-slate-200 pb-6 last:border-b-0">
+                  <p className="text-slate-700 whitespace-pre-wrap mb-4">{answer.body}</p>
 
-        {answer.attachments && answer.attachments.length > 0 && (
-          <div className="mt-4">
-            <h3 className="text-sm font-medium text-slate-600 mb-2">Attachments:</h3>
-            <div className="flex flex-wrap gap-4">
-              {answer.attachments.map((att) => {
-                const imageUrl = getAnswerImageUrl(att.file_path);
-                return (
-                  <a
-                    key={att.id}
-                    href={imageUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-32 h-32 border rounded-md overflow-hidden flex items-center justify-center text-sm text-slate-600"
-                  >
-                    <img
-                      src={imageUrl}
-                      alt={`Answer attachment ${att.id}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </a>
-                );
-              })}
-            </div>
-          </div>
-        )}
+                  {answer.attachments.length > 0 && (
+                    <div className="mt-4 mb-4">
+                      <h3 className="text-sm font-medium text-slate-600 mb-2">Attachments:</h3>
+                      <div className="flex flex-wrap gap-4">
+                        {answer.attachments.map(att => (
+                          <a
+                            key={att.id}
+                            href={getAnswerImageUrl(att.file_path)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-32 h-32 border rounded-md overflow-hidden flex items-center justify-center text-sm text-slate-600"
+                          >
+                            <img
+                              src={getAnswerImageUrl(att.file_path)}
+                              alt={`Answer attachment ${att.id}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-                  <div className="mt-2 flex items-center gap-3 text-sm text-slate-500">
-                    <span>
-                      Posted: {new Date(answer.created_at).toLocaleString()}
-                    </span>
-                    <span className="ml-auto font-semibold text-slate-700">
-                      Score: {answer.score}
-                    </span>
-                    <button
-                      onClick={() => voteAnswer(answer.id, 1)}
-                      className="px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200"
-                    >
-                      ▲
-                    </button>
-                    <button
-                      onClick={() => voteAnswer(answer.id, -1)}
-                      className="px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
-                    >
-                      ▼
-                    </button>
+                  <div className="flex items-center justify-between text-sm text-slate-500">
+                    <div className="flex items-center gap-4">
+                      <span>
+                        Answered by <strong className="text-slate-700">{getDisplayName(answer.author)}</strong>
+                      </span>
+                      <span>•</span>
+                      <span>{formatDate(answer.created_at)}</span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-slate-700">Score: {answer.score}</span>
+                      <button
+                        onClick={() => voteAnswer(answer.id, 1)}
+                        className={`px-2 py-1 rounded transition-colors ${userVotes[answer.id] === 1 ? 'bg-green-300 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
+                        title="Upvote"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        onClick={() => voteAnswer(answer.id, -1)}
+                        className={`px-2 py-1 rounded transition-colors ${userVotes[answer.id] === -1 ? 'bg-red-300 text-white' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}
+                        title="Downvote"
+                      >
+                        ▼
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

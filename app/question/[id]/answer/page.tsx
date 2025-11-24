@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import Header from "@/app/components/Header";
-import heic2any from 'heic2any';
 
 interface Answer {
   id: string;
@@ -30,6 +29,15 @@ export default function AnswerForm() {
   const [previews, setPreviews] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasHeicFiles, setHasHeicFiles] = useState(false);
+
+  // Check for HEIC files whenever files change
+  useEffect(() => {
+    const hasHeic = files.some(file => 
+      file.type === 'image/heic' || file.name.toLowerCase().endsWith('.heic')
+    );
+    setHasHeicFiles(hasHeic);
+  }, [files]);
 
   // Preview images
   useEffect(() => {
@@ -44,45 +52,11 @@ export default function AnswerForm() {
     return () => newPreviews.forEach((url) => URL.revokeObjectURL(url));
   }, [files]);
 
-  const convertHeicToJpg = async (file: File): Promise<File> => {
-    if (file.type !== 'image/heic' && !file.name.toLowerCase().endsWith('.heic')) {
-      return file;
-    }
-
-    try {
-      const jpegBlob = await heic2any({
-        blob: file,
-        toType: 'image/jpeg',
-        quality: 0.8
-      }) as Blob;
-
-      const newFileName = file.name.replace(/\.heic$/i, '.jpg');
-      return new File([jpegBlob], newFileName, { type: 'image/jpeg' });
-    } catch (error) {
-      console.error('HEIC conversion failed:', error);
-      throw new Error('Failed to convert HEIC image to JPEG');
-    }
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
-
-    const convertedFiles: File[] = [];
     
-    try {
-      for (const file of Array.from(e.target.files)) {
-        if (file.type === 'image/heic' || file.name.toLowerCase().endsWith('.heic')) {
-          const convertedFile = await convertHeicToJpg(file);
-          convertedFiles.push(convertedFile);
-        } else {
-          convertedFiles.push(file);
-        }
-      }
-      
-      setFiles(convertedFiles);
-    } catch (error: any) {
-      setError(error.message || 'Failed to process images');
-    }
+    // Simply set the files without any conversion
+    setFiles(Array.from(e.target.files));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -96,6 +70,11 @@ export default function AnswerForm() {
 
     if (!questionId) {
       setError("Question ID is missing.");
+      return;
+    }
+
+    if (hasHeicFiles) {
+      setError("Please remove HEIC files before submitting.");
       return;
     }
 
@@ -122,29 +101,30 @@ export default function AnswerForm() {
 
       const answerId = answerData.id;
 
-        if (files.length > 0) {
+      if (files.length > 0) {
         for (const file of files) {
-        const safeFileName = file.name.replace(/ /g, '_');
-        const filePath = `${questionId}/answers/${answerId}/${safeFileName}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from("answer-files")
-          .upload(filePath, file);
+          const safeFileName = file.name.replace(/ /g, '_');
+          const filePath = `${questionId}/answers/${answerId}/${safeFileName}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from("answer-files")
+            .upload(filePath, file);
 
-        if (uploadError) throw uploadError;
+          if (uploadError) throw uploadError;
 
-        const { error: attachError } = await supabase
-          .from("answer_attachments")
-          .insert([
-            { 
-              answer_id: answerId, 
-              file_path: filePath 
-            }
-          ]);
+          const { error: attachError } = await supabase
+            .from("answer_attachments")
+            .insert([
+              { 
+                answer_id: answerId, 
+                file_path: filePath 
+              }
+            ]);
 
-        if (attachError) throw attachError;
+          if (attachError) throw attachError;
+        }
       }
-    }
+      
       router.push(`/question/${questionId}`);
     } catch (err: any) {
       setError(err.message || "Failed to post answer.");
@@ -158,6 +138,8 @@ export default function AnswerForm() {
     newFiles.splice(index, 1);
     setFiles(newFiles);
   };
+
+  const isSubmitDisabled = loading || hasHeicFiles;
 
   return (
     <>
@@ -186,55 +168,90 @@ export default function AnswerForm() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Attach Images (HEIC files will be converted to JPG automatically)
+                  Attach Images
                 </label>
                 <input
                   type="file"
                   multiple
-                  accept="image/*,.heic,.HEIC"
+                  accept="image/*"
                   onChange={handleFileChange}
                   className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                 />
+                <p className="text-xs text-slate-500 mt-1">
+                  HEIC files are not supported. Please convert to JPEG or PNG before uploading.
+                </p>
               </div>
+
+              {hasHeicFiles && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                  <p className="text-red-600 font-medium">HEIC files are not allowed!</p>
+                  <p className="text-red-500 text-sm mt-1">
+                    Please remove all HEIC files before submitting your answer.
+                  </p>
+                </div>
+              )}
 
               {previews.length > 0 && (
                 <div className="mt-4">
                   <h3 className="text-sm font-medium text-slate-700 mb-3">Image Previews:</h3>
                   <div className="flex flex-wrap gap-4">
-                    {previews.map((src, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={src}
-                          alt={`preview-${index}`}
-                          className="w-32 h-32 object-cover rounded-md border shadow-sm"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeFile(index)}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                        >
-                          ×
-                        </button>
-                        <div className="text-xs text-slate-500 mt-1 truncate max-w-32">
-                          {files[index]?.name}
+                    {previews.map((src, index) => {
+                      const isHeicFile = files[index]?.type === 'image/heic' || 
+                                        files[index]?.name.toLowerCase().endsWith('.heic');
+                      
+                      return (
+                        <div key={index} className="relative group">
+                          <img
+                            src={src}
+                            alt={`preview-${index}`}
+                            className={`w-32 h-32 object-cover rounded-md border shadow-sm ${
+                              isHeicFile ? 'opacity-50 border-2 border-red-500' : ''
+                            }`}
+                          />
+                          {isHeicFile && (
+                            <div className="absolute inset-0 bg-red-500 bg-opacity-20 rounded-md flex items-center justify-center">
+                              <span className="text-red-600 font-bold text-sm bg-white bg-opacity-90 px-2 py-1 rounded">
+                                HEIC
+                              </span>
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeFile(index)}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                          >
+                            ×
+                          </button>
+                          <div className={`text-xs mt-1 truncate max-w-32 ${
+                            isHeicFile ? 'text-red-600 font-medium' : 'text-slate-500'
+                          }`}>
+                            {files[index]?.name}
+                            {isHeicFile && ' (HEIC)'}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={isSubmitDisabled}
                 className={`py-3 rounded-md text-white font-medium text-lg transition-colors ${
-                  loading
+                  isSubmitDisabled
                     ? "bg-indigo-300 cursor-not-allowed"
                     : "bg-indigo-600 hover:bg-indigo-700"
                 }`}
               >
                 {loading ? "Posting Answer..." : "Post Answer"}
               </button>
+
+              {hasHeicFiles && (
+                <p className="text-red-600 text-sm text-center">
+                  HEIC files are not allowed! Please remove them to submit your answer.
+                </p>
+              )}
             </form>
           </div>
         </section>
