@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 interface User {
   username: string;
   email: string;
+  is_admin: boolean;
 }
 
 export default function Header() {
@@ -15,38 +16,39 @@ export default function Header() {
   const supabase = createClientComponentClient();
   const [user, setUser] = useState<User | null>(null);
 
-  // Fetch current user on mount
   useEffect(() => {
     const getUser = async () => {
       const { data } = await supabase.auth.getUser();
-      const u = data.user;
-      if (u && u.email) {
+      const authUser = data.user;
+
+      if (!authUser) {
+        setUser(null);
+        return;
+      }
+
+      const { data: dbUser } = await supabase
+        .from("users")
+        .select("username, email, is_admin")
+        .eq("id", authUser.id)
+        .single();
+
+      if (dbUser) {
         setUser({
-          username: (u.user_metadata as any)?.username || u.email,
-          email: u.email,
+          username: dbUser.username,
+          email: dbUser.email,
+          is_admin: dbUser.is_admin,
         });
       }
     };
 
     getUser();
 
-    // Listen for auth state changes
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      const u = session?.user;
-      if (u && u.email) {
-        setUser({
-          username: (u.user_metadata as any)?.username || u.email,
-          email: u.email,
-        });
-      } else {
-        setUser(null);
-      }
+    const { data: listener } = supabase.auth.onAuthStateChange(() => {
+      getUser();
     });
 
-    return () => {
-      listener.subscription.unsubscribe();
-    };
-  }, [supabase]);
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -70,9 +72,19 @@ export default function Header() {
         <nav className="flex items-center space-x-5 ml-auto">
           {user ? (
             <>
+              {user.is_admin && (
+                <Link
+                  href="/admin"
+                  className="px-4 py-2 text-sm bg-red-600 text-white rounded-md shadow hover:bg-red-700"
+                >
+                  Admin Panel
+                </Link>
+              )}
+
               <span className="px-4 py-2 text-sm font-medium text-slate-700">
                 Hello, {user.username}
               </span>
+
               <button
                 onClick={handleLogout}
                 className="px-4 py-2 text-sm rounded-md border border-transparent hover:bg-indigo-50"
