@@ -15,8 +15,68 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing action or userId" }, { status: 400 });
     }
 
-    // Delete user
+    // Delete user and their content
     if (action === "delete") {
+      // Remove questions and related data for this user
+      const { data: userQuestions } = await supabaseAdmin
+        .from("questions")
+        .select("id")
+        .eq("author_id", userId);
+
+      if (userQuestions && userQuestions.length > 0) {
+        const questionIds = userQuestions.map(q => q.id);
+
+        // Question attachments
+        const { data: qAtt } = await supabaseAdmin
+          .from("question_attachments")
+          .select("file_path")
+          .in("question_id", questionIds);
+        if (qAtt && qAtt.length > 0) {
+          await supabaseAdmin.storage.from("questions-files").remove(qAtt.map(a => a.file_path));
+          await supabaseAdmin.from("question_attachments").delete().in("question_id", questionIds);
+        }
+
+        // Answers to these questions (regardless of author)
+        const { data: qAnswers } = await supabaseAdmin
+          .from("answers")
+          .select("id")
+          .in("question_id", questionIds);
+        const qAnswerIds = qAnswers?.map(a => a.id) || [];
+        if (qAnswerIds.length > 0) {
+          const { data: aAtt } = await supabaseAdmin
+            .from("answer_attachments")
+            .select("file_path")
+            .in("answer_id", qAnswerIds);
+          if (aAtt && aAtt.length > 0) {
+            await supabaseAdmin.storage.from("answer-files").remove(aAtt.map(a => a.file_path));
+            await supabaseAdmin.from("answer_attachments").delete().in("answer_id", qAnswerIds);
+          }
+          await supabaseAdmin.from("answers").delete().in("id", qAnswerIds);
+        }
+
+        await supabaseAdmin.from("questions_tags").delete().in("question_id", questionIds);
+        await supabaseAdmin.from("questions").delete().in("id", questionIds);
+      }
+
+      // Remove answers authored by this user on other questions
+      const { data: userAnswers } = await supabaseAdmin
+        .from("answers")
+        .select("id")
+        .eq("author_id", userId);
+      const userAnswerIds = userAnswers?.map(a => a.id) || [];
+      if (userAnswerIds.length > 0) {
+        const { data: aAtt } = await supabaseAdmin
+          .from("answer_attachments")
+          .select("file_path")
+          .in("answer_id", userAnswerIds);
+        if (aAtt && aAtt.length > 0) {
+          await supabaseAdmin.storage.from("answer-files").remove(aAtt.map(a => a.file_path));
+          await supabaseAdmin.from("answer_attachments").delete().in("answer_id", userAnswerIds);
+        }
+        await supabaseAdmin.from("answers").delete().in("id", userAnswerIds);
+      }
+
+      // Delete auth user and profile row last
       const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
       if (authError) return NextResponse.json({ error: authError.message }, { status: 400 });
 

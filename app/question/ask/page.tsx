@@ -88,7 +88,7 @@ export default function AskQuestionForm() {
       // Insert question
       const { data: questionData, error: questionError } = await supabase
         .from("questions")
-        .insert({ title, body, author_id })
+        .insert({ title, body, author_id, is_public: false })
         .select()
         .single();
 
@@ -136,7 +136,7 @@ export default function AskQuestionForm() {
         }
       }
 
-      router.push(`/question/${questionId}`);
+      router.push(`/question/${questionId}?pending=1`);
     } catch (err: any) {
       setError(err.message || "Failed to post question.");
     } finally {
@@ -149,7 +149,7 @@ export default function AskQuestionForm() {
   return (
     <>
       <Header />
-      <main className="pt-24 min-h-screen bg-gradient-to-b from-sky-50 via-white to-gray-50 text-slate-800">
+      <main className="pt-24 min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-slate-800">
         <section className="max-w-7xl mx-auto px-6 py-12 flex-1">
           <div className="bg-white rounded-xl shadow-lg p-10 border border-slate-100">
             <h1 className="text-3xl font-bold mb-6">Ask a Question</h1>
@@ -224,8 +224,78 @@ export default function AskQuestionForm() {
 
               {/* Right column: attachments + submit */}
               <div className="flex flex-col gap-6">
-                {/* Your existing file upload + previews code here */}
-                {/* ... */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Attach Images
+                  </label>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    HEIC files are not supported. Please convert to JPEG or PNG before uploading.
+                  </p>
+                </div>
+
+                {hasHeicFiles && (
+                  <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                    <p className="text-red-600 font-medium">HEIC files are not allowed!</p>
+                    <p className="text-red-500 text-sm mt-1">
+                      Please remove all HEIC files before submitting your question.
+                    </p>
+                  </div>
+                )}
+
+                {previews.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium text-slate-700 mb-3">Image Previews</h3>
+                    <div className="flex flex-wrap gap-4">
+                      {previews.map((src, index) => {
+                        const isHeicFile =
+                          files[index]?.type === "image/heic" ||
+                          files[index]?.name.toLowerCase().endsWith(".heic");
+
+                        return (
+                          <div key={index} className="relative group">
+                            <img
+                              src={src}
+                              alt={`preview-${index}`}
+                              className={`w-32 h-32 object-cover rounded-md border shadow-sm ${
+                                isHeicFile ? "opacity-50 border-2 border-red-500" : ""
+                              }`}
+                            />
+                            {isHeicFile && (
+                              <div className="absolute inset-0 bg-red-500 bg-opacity-20 rounded-md flex items-center justify-center">
+                                <span className="text-red-600 font-bold text-sm bg-white bg-opacity-90 px-2 py-1 rounded">
+                                  HEIC
+                                </span>
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => removeFile(index)}
+                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                            >
+                              ×
+                            </button>
+                            <div
+                              className={`text-xs mt-1 truncate max-w-32 ${
+                                isHeicFile ? "text-red-600 font-medium" : "text-slate-500"
+                              }`}
+                            >
+                              {files[index]?.name}
+                              {isHeicFile && " (HEIC)"}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <button
                   type="submit"
                   disabled={isSubmitDisabled}
@@ -235,6 +305,9 @@ export default function AskQuestionForm() {
                 >
                   {loading ? "Posting..." : "Post Question"}
                 </button>
+                <p className="text-xs text-slate-500 text-center">
+                  New questions are reviewed by an admin before they go live.
+                </p>
               </div>
             </form>
           </div>

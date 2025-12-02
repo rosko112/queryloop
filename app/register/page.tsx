@@ -20,6 +20,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -55,6 +56,7 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
     if (!canSubmit) return;
 
     setLoading(true);
@@ -92,7 +94,10 @@ export default function RegisterPage() {
         return;
       }
 
-      router.push("/");
+      setSuccess("Account created successfully. Redirecting...");
+      setTimeout(() => {
+        router.push("/");
+      }, 700);
     } catch (err: any) {
       setError(err?.message || "Network error");
     } finally {
@@ -103,9 +108,12 @@ export default function RegisterPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen flex flex-col bg-gradient-to-b from-sky-50 via-white to-gray-50 pt-24 p-6">
+      <main className="min-h-screen flex flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 pt-24 p-6">
         <div className="w-full max-w-md mx-auto bg-white/90 backdrop-blur-sm border border-slate-100 rounded-xl shadow-lg p-8">
         <p className="text-2xl font-semibold mb-6 text-center text-black">Create your account</p>
+          {error && <div className="text-sm text-rose-400">{error}</div>}
+          {success && <div className="text-sm text-green-300">{success}</div>}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <label className="block">
               <span className="text-sm font-medium text-slate-700">Username</span>
@@ -116,7 +124,7 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 placeholder="johndoe"
                 required
-                className="text-black mt-1 w-full rounded-md border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                className="text-black mt-1 w-full rounded-md border border-black px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200"
                 minLength={3}
               />
             </label>
@@ -130,7 +138,7 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 placeholder="you@example.com"
                 required
-                className="text-black mt-1 w-full rounded-md border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                className="text-black mt-1 w-full rounded-md border border-black px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200"
               />
             </label>
 
@@ -143,7 +151,7 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 placeholder="••••••••"
                 required
-                className="text-black mt-1 w-full rounded-md border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                className="text-black mt-1 w-full rounded-md border border-black px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200"
                 minLength={8}
               />
               <p className="text-xs text-slate-500 mt-1">Minimum 8 characters</p>
@@ -158,7 +166,7 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 placeholder="••••••••"
                 required
-                className="text-black mt-1 w-full rounded-md border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                className="text-black mt-1 w-full rounded-md border border-black px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200"
               />
               <button
                 type="button"
@@ -188,9 +196,6 @@ export default function RegisterPage() {
                 </Link>
               </span>
             </label>
-
-            {error && <div className="text-sm text-rose-600">{error}</div>}
-
             <button
               type="submit"
               disabled={!canSubmit}

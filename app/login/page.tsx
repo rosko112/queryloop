@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -32,6 +33,7 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
     if (!canSubmit) return;
 
     setLoading(true);
@@ -64,7 +66,10 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/");
+      setSuccess("Login successful. Redirecting...");
+      setTimeout(() => {
+        router.push("/");
+      }, 500);
     } catch (err: any) {
       setError(err?.message || "Network error");
     } finally {
@@ -75,11 +80,12 @@ export default function LoginPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6">
+      <main className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-6">
         <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
           <h1 className="text-2xl font-semibold mb-6 text-center text-black">Login</h1>
 
-          {error && <div className="text-red-600 text-sm mb-4 text-center">{error}</div>}
+          {error && <div className="text-red-500 text-sm mb-4 text-center">{error}</div>}
+          {success && <div className="text-green-400 text-sm mb-4 text-center">{success}</div>}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
