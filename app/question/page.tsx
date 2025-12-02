@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import Header from "@/app/components/Header";
 import Link from "next/link";
@@ -24,7 +24,7 @@ interface Tag {
   name: string;
 }
 
-export default function AllQuestionsPage() {
+function AllQuestionsPageContent() {
   const supabase = createClientComponentClient();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -226,5 +226,13 @@ export default function AllQuestionsPage() {
         </section>
       </main>
     </>
+  );
+}
+
+export default function AllQuestionsPage() {
+  return (
+    <Suspense fallback={<div className="pt-24 text-center text-slate-400">Loading questions...</div>}>
+      <AllQuestionsPageContent />
+    </Suspense>
   );
 }
