@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import Header from "@/app/components/Header";
 import QuestionSkeleton from "@/app/components/QuestionSkeleton";
@@ -526,7 +527,17 @@ export default function QuestionPage() {
 
             <div className="flex items-center text-sm text-slate-300 mb-6">
               <span>
-                Asked by <strong>{author?.display_name || author?.username}</strong>
+                Asked by{" "}
+                {author?.username ? (
+                  <Link
+                    href={`/u/${author.username}`}
+                    className="text-indigo-300 hover:text-indigo-200 underline font-semibold"
+                  >
+                    {author?.display_name || author?.username}
+                  </Link>
+                ) : (
+                  <strong>{author?.display_name || author?.username || "Unknown"}</strong>
+                )}
               </span>
               <span className="mx-2">|</span>
               <span>{new Date(question.created_at).toLocaleDateString()}</span>
@@ -584,7 +595,17 @@ export default function QuestionPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex flex-col gap-2">
                         <div className="text-sm text-slate-200">
-                          Answered by <strong>{answer.author?.display_name || answer.author?.username || "Unknown"}</strong>
+                          Answered by{" "}
+                          {answer.author?.username ? (
+                            <Link
+                              href={`/u/${answer.author.username}`}
+                              className="text-indigo-300 hover:text-indigo-200 underline font-semibold"
+                            >
+                              {answer.author?.display_name || answer.author?.username || "Unknown"}
+                            </Link>
+                          ) : (
+                            <strong>{answer.author?.display_name || answer.author?.username || "Unknown"}</strong>
+                          )}
                         </div>
                         <p className="text-slate-100 whitespace-pre-wrap">{answer.body}</p>
                         <p className="text-xs text-slate-400">

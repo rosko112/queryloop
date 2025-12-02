@@ -49,38 +49,21 @@ export default function ModerationPage() {
     setLoading(true);
     setError(null);
 
-    const { data: questions, error: qError } = await supabase
-      .from("questions")
-      .select("id, title, author_id, created_at")
-      .eq("is_public", false)
-      .order("created_at", { ascending: true });
+    try {
+      const res = await fetch("/api/admin/moderation");
+      const payload = await res.json();
 
-    if (qError) {
-      setError(qError.message);
+      if (!res.ok || payload.error) {
+        throw new Error(payload.error || "Failed to load pending questions.");
+      }
+
+      setPending(payload.data || []);
+    } catch (err: any) {
+      setError(err.message || "Failed to load pending questions.");
+      setPending([]);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const authorIds = [...new Set((questions || []).map(q => q.author_id))];
-    let authors: Record<string, { username?: string; display_name?: string }> = {};
-    if (authorIds.length > 0) {
-      const { data: authorRows } = await supabase
-        .from("users")
-        .select("id, username, display_name")
-        .in("id", authorIds);
-
-      authorRows?.forEach(a => {
-        authors[a.id] = { username: a.username, display_name: (a as any).display_name };
-      });
-    }
-
-    const withAuthors = (questions || []).map(q => ({
-      ...q,
-      author: authors[q.author_id] || {},
-    }));
-
-    setPending(withAuthors);
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -90,17 +73,24 @@ export default function ModerationPage() {
   const approve = async (questionId: string) => {
     setActioning(questionId);
     setError(null);
-    const { error: updateError } = await supabase
-      .from("questions")
-      .update({ is_public: true })
-      .eq("id", questionId);
+    try {
+      const res = await fetch("/api/admin/moderation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "approve", questionId }),
+      });
 
-    if (updateError) {
-      setError(updateError.message);
-    } else {
+      const payload = await res.json();
+      if (!res.ok || payload.error) {
+        throw new Error(payload.error || "Failed to approve question.");
+      }
+
       setPending(prev => prev.filter(q => q.id !== questionId));
+    } catch (err: any) {
+      setError(err.message || "Failed to approve question.");
+    } finally {
+      setActioning(null);
     }
-    setActioning(null);
   };
 
   const removeQuestion = async (questionId: string) => {
@@ -108,40 +98,16 @@ export default function ModerationPage() {
     setError(null);
 
     try {
-      // Delete question attachments from storage + db
-      const { data: qAttachments } = await supabase
-        .from("question_attachments")
-        .select("file_path")
-        .eq("question_id", questionId);
-      if (qAttachments && qAttachments.length > 0) {
-        await supabase.storage
-          .from("questions-files")
-          .remove(qAttachments.map(att => att.file_path));
-        await supabase.from("question_attachments").delete().eq("question_id", questionId);
-      }
+      const res = await fetch("/api/admin/moderation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reject", questionId }),
+      });
 
-      // Delete any answer attachments (should be none yet, but defensive)
-      const { data: answers } = await supabase
-        .from("answers")
-        .select("id")
-        .eq("question_id", questionId);
-      const answerIds = answers?.map(a => a.id) || [];
-      if (answerIds.length > 0) {
-        const { data: answerAttachments } = await supabase
-          .from("answer_attachments")
-          .select("file_path")
-          .in("answer_id", answerIds);
-        if (answerAttachments && answerAttachments.length > 0) {
-          await supabase.storage
-            .from("answer-files")
-            .remove(answerAttachments.map(att => att.file_path));
-          await supabase.from("answer_attachments").delete().in("answer_id", answerIds);
-        }
-        await supabase.from("answers").delete().eq("question_id", questionId);
+      const payload = await res.json();
+      if (!res.ok || payload.error) {
+        throw new Error(payload.error || "Failed to remove question.");
       }
-
-      await supabase.from("questions_tags").delete().eq("question_id", questionId);
-      await supabase.from("questions").delete().eq("id", questionId);
 
       setPending(prev => prev.filter(q => q.id !== questionId));
     } catch (err: any) {

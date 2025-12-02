@@ -28,8 +28,11 @@ export default function AdminPage() {
 
   const [users, setUsers] = useState<User[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [usersLoading, setUsersLoading] = useState(true);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
+  const [userPage, setUserPage] = useState(1);
+  const [userTotal, setUserTotal] = useState(0);
+  const pageSize = 10;
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -53,23 +56,31 @@ export default function AdminPage() {
     checkAdmin();
   }, []);
 
-  const fetchUsers = async () => {
-    const { data, error } = await supabase
+  const fetchUsers = async (page: number) => {
+    setUsersLoading(true);
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const { data, error, count } = await supabase
       .from("users")
-      .select("id, username, email, is_admin, reputation, created_at")
-      .order("created_at", { ascending: true });
+      .select("id, username, email, is_admin, reputation, created_at", { count: "exact" })
+      .order("created_at", { ascending: true })
+      .range(from, to);
 
     if (error) {
       console.error(error);
+      setUsers([]);
+      setUserTotal(0);
     } else {
-      setUsers(data);
+      setUsers(data || []);
+      if (typeof count === "number") setUserTotal(count);
     }
-    setLoading(false);
+    setUsersLoading(false);
   };
 
   useEffect(() => {
-    if (!checkingAdmin) fetchUsers();
-  }, [checkingAdmin]);
+    if (!checkingAdmin) fetchUsers(userPage);
+  }, [checkingAdmin, userPage]);
 
   useEffect(() => {
     const fetchQuestions = async () => {
@@ -96,7 +107,7 @@ export default function AdminPage() {
   if (data.error) return alert("Error: " + data.error);
 
   alert("User deleted successfully!");
-  fetchUsers();
+  fetchUsers(userPage);
 };
 
 const toggleAdmin = async (id: string, is_admin: boolean) => {
@@ -110,11 +121,13 @@ const toggleAdmin = async (id: string, is_admin: boolean) => {
   if (data.error) return alert("Error: " + data.error);
 
   alert("Admin status updated!");
-  fetchUsers();
+  fetchUsers(userPage);
 };
 
-  if (checkingAdmin || loading)
+  if (checkingAdmin || (usersLoading && users.length === 0))
     return <p className="pt-32 text-center text-slate-400 text-lg">Loading...</p>;
+
+  const totalPages = Math.max(1, Math.ceil(userTotal / pageSize));
 
   return (
     <>
@@ -132,6 +145,9 @@ const toggleAdmin = async (id: string, is_admin: boolean) => {
           </div>
 
           <div className="overflow-x-auto bg-slate-800/60 border border-slate-700 rounded-xl shadow">
+            {usersLoading && (
+              <div className="px-4 py-2 text-sm text-slate-400">Loading users...</div>
+            )}
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="bg-slate-800 text-slate-200">
@@ -174,6 +190,27 @@ const toggleAdmin = async (id: string, is_admin: boolean) => {
                 ))}
               </tbody>
             </table>
+            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-700 text-sm text-slate-200">
+              <div>
+                Page {userPage} of {totalPages} {userTotal ? `(Total: ${userTotal})` : ""}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setUserPage(Math.max(1, userPage - 1))}
+                  disabled={userPage === 1}
+                  className="px-3 py-1 rounded-md border border-slate-700 bg-slate-800 hover:bg-slate-700 disabled:opacity-50"
+                >
+                  Prev
+                </button>
+                <button
+                  onClick={() => setUserPage(Math.min(totalPages, userPage + 1))}
+                  disabled={userPage >= totalPages}
+                  className="px-3 py-1 rounded-md border border-slate-700 bg-slate-800 hover:bg-slate-700 disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="bg-slate-800/60 border border-slate-700 rounded-xl shadow p-6">

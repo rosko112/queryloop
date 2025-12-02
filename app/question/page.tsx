@@ -212,7 +212,12 @@ function AllQuestionsPageContent() {
                     <span className="text-sm text-slate-400">{new Date(q.created_at).toLocaleDateString()}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm text-slate-300">Asked by {q.username}</span>
+                    <span className="text-sm text-slate-300">
+                      Asked by{" "}
+                      <Link href={`/u/${q.username}`} className="text-indigo-300 hover:text-indigo-200 underline">
+                        {q.username}
+                      </Link>
+                    </span>
                     {q.tags?.map(tag => (
                       <span key={tag.id} className="px-3 py-1 bg-indigo-500/15 text-indigo-200 rounded-full text-xs border border-indigo-400/30">
                         {tag.name}

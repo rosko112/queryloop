@@ -12,6 +12,7 @@ export default function RegisterPage() {
 
   const [formData, setFormData] = useState({
     username: "",
+    displayName: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -34,12 +35,14 @@ export default function RegisterPage() {
 
   const isValidEmail = /\S+@\S+\.\S+/.test(formData.email);
   const isValidUsername = formData.username.length >= 3;
+  const isValidDisplayName = formData.displayName.trim().length >= 2;
   const isValidPassword = formData.password.length >= 8;
   const passwordsMatch = formData.password === formData.confirmPassword;
 
   const canSubmit =
     isValidEmail &&
     isValidUsername &&
+    isValidDisplayName &&
     isValidPassword &&
     passwordsMatch &&
     formData.acceptTerms &&
@@ -66,7 +69,7 @@ export default function RegisterPage() {
         email: formData.email.trim(),
         password: formData.password,
         options: {
-          data: { username: formData.username.trim() }, 
+          data: { username: formData.username.trim(), display_name: formData.displayName.trim() }, 
         },
       });
 
@@ -86,6 +89,7 @@ export default function RegisterPage() {
         id: userId,
         username: formData.username.trim(),
         email: formData.email.trim(),
+        display_name: formData.displayName.trim(),
         reputation: 0,
       });
 
@@ -126,6 +130,20 @@ export default function RegisterPage() {
                 required
                 className="text-black mt-1 w-full rounded-md border border-black px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200"
                 minLength={3}
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Display Name</span>
+              <input
+                type="text"
+                name="displayName"
+                value={formData.displayName}
+                onChange={handleChange}
+                placeholder="John Doe"
+                required
+                className="text-black mt-1 w-full rounded-md border border-black px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                minLength={2}
               />
             </label>
 
