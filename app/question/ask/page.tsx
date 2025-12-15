@@ -18,6 +18,11 @@ export default function AskQuestionForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasHeicFiles, setHasHeicFiles] = useState(false);
+  const [titleError, setTitleError] = useState<string | null>(null);
+  const [bodyError, setBodyError] = useState<string | null>(null);
+  const [tagError, setTagError] = useState<string | null>(null);
+  const maxTitleLength = 120;
+  const maxFiles = 5;
 
   // Check for HEIC files whenever files change
   useEffect(() => {
@@ -42,7 +47,9 @@ export default function AskQuestionForm() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
-    setFiles(Array.from(e.target.files));
+    const selected = Array.from(e.target.files);
+    const nextFiles = [...files, ...selected].slice(0, maxFiles);
+    setFiles(nextFiles);
   };
 
   const removeFile = (index: number) => {
@@ -67,10 +74,23 @@ export default function AskQuestionForm() {
     e.preventDefault();
     setError(null);
 
-    if (!title || !body) {
-      setError("Title and body are required.");
+    const trimmedTitle = title.trim();
+    const trimmedBody = body.trim();
+
+    if (!trimmedTitle || !trimmedBody || tags.length === 0) {
+      setTitleError(!trimmedTitle ? "Title is required." : null);
+      setBodyError(!trimmedBody ? "Body is required." : null);
+      setTagError(tags.length === 0 ? "Please add at least one tag." : null);
+      setError("Title, body, and at least one tag are required.");
       return;
     }
+    if (trimmedTitle.length > maxTitleLength) {
+      setTitleError(`Title must be ${maxTitleLength} characters or fewer.`);
+      return;
+    }
+    setTitleError(null);
+    setBodyError(null);
+    setTagError(null);
 
     if (hasHeicFiles) {
       setError("Please remove HEIC files before submitting.");
@@ -166,23 +186,35 @@ export default function AskQuestionForm() {
                   <input
                     type="text"
                     value={title}
-                    onChange={(e) => setTitle(e.target.value)}
+                    onChange={(e) => {
+                      setTitle(e.target.value);
+                      if (titleError) setTitleError(null);
+                    }}
+                    maxLength={maxTitleLength}
                     required
                     placeholder="Enter your question title"
                     className="mt-2 w-full rounded-md border border-slate-700 bg-slate-800 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 text-lg text-slate-50 placeholder:text-slate-500"
                   />
+                  <div className="flex items-center justify-between mt-1 text-xs text-slate-400">
+                    <span>{title.length}/{maxTitleLength} characters</span>
+                    {titleError && <span className="text-red-300">{titleError}</span>}
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-200">Body</label>
                   <textarea
                     value={body}
-                    onChange={(e) => setBody(e.target.value)}
+                    onChange={(e) => {
+                      setBody(e.target.value);
+                      if (bodyError) setBodyError(null);
+                    }}
                     required
                     rows={10}
                     placeholder="Describe your question in detail"
                     className="mt-2 w-full rounded-md border border-slate-700 bg-slate-800 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 text-lg text-slate-50 placeholder:text-slate-500"
                   />
+                  {bodyError && <p className="text-sm text-red-300 mt-1">{bodyError}</p>}
                 </div>
 
                 <div>
@@ -226,6 +258,7 @@ export default function AskQuestionForm() {
                       Add
                     </button>
                   </div>
+                  {tagError && <p className="text-sm text-red-300 mt-1">{tagError}</p>}
                 </div>
               </div>
 
@@ -240,10 +273,12 @@ export default function AskQuestionForm() {
                     multiple
                     accept="image/*"
                     onChange={handleFileChange}
+                    multiple
+                    accept="image/*"
                     className="w-full text-sm text-slate-200 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border border-slate-700 file:border-slate-700 file:text-sm file:font-semibold file:bg-slate-800 file:text-indigo-200 hover:file:bg-slate-700"
                   />
                   <p className="text-xs text-slate-400 mt-1">
-                    HEIC files are not supported. Please convert to JPEG or PNG before uploading.
+                    Up to {maxFiles} images. HEIC files are not supported. Please convert to JPEG or PNG before uploading.
                   </p>
                 </div>
 

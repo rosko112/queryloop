@@ -205,7 +205,7 @@ export default function RegisterPage() {
               />
               <span className="text-sm text-slate-400">
                 I agree to the{" "}
-                <Link href="/terms" className="text-indigo-200 hover:underline">
+                <Link href="/privacy" className="text-indigo-200 hover:underline">
                   Terms of Service
                 </Link>{" "}
                 and{" "}
@@ -225,6 +225,12 @@ export default function RegisterPage() {
             >
               {loading ? "Creating account…" : "Create Account"}
             </button>
+            <p className="mt-6 text-center text-sm text-slate-400">
+            Already got an account?{" "}
+            <Link href="/login" className="text-indigo-200 hover:underline">
+              Log in
+            </Link>
+          </p>
           </form>
         </div>
       </main>

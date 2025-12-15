@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
 import Header from "@/app/components/Header";
+import ProfileSkeleton from "@/app/components/ProfileSkeleton";
 
 interface UserProfile {
   id: string;
@@ -64,39 +65,39 @@ export default function EditProfilePage() {
     }
   };
 
-  if (loading) return <p className="pt-32 text-center text-slate-500 text-lg">Loading...</p>;
+  if (loading) return <ProfileSkeleton />;
   if (!user) return <p className="pt-32 text-center text-slate-500 text-lg">User not found.</p>;
 
   return (
     <>
       <Header />
-      <main className="pt-24 min-h-screen bg-white text-slate-800">
+      <main className="pt-24 min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-slate-50">
         <section className="max-w-4xl mx-auto px-6 py-12">
-          <div className="bg-white rounded-lg shadow-md border border-slate-200 p-8">
-            <h1 className="text-3xl font-extrabold text-indigo-600 mb-6">Edit Profile</h1>
+          <div className="bg-slate-900/70 rounded-lg shadow-md border border-slate-700 p-8">
+            <h1 className="text-3xl font-extrabold text-white mb-6">Edit Profile</h1>
 
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-semibold text-indigo-500 mb-2">
+                <label className="block text-sm font-semibold text-indigo-200 mb-2">
                   Display Name
                 </label>
                 <input
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className="w-full border border-slate-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  className="w-full border border-slate-700 rounded-md px-4 py-2 bg-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
                   placeholder="Enter your display name"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-indigo-500 mb-2">
+                <label className="block text-sm font-semibold text-indigo-200 mb-2">
                   Bio
                 </label>
                 <textarea
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
-                  className="w-full border border-slate-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200 min-h-[100px]"
+                  className="w-full border border-slate-700 rounded-md px-4 py-2 bg-slate-800 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 min-h-[100px]"
                   placeholder="Tell something about yourself"
                 />
               </div>
@@ -111,7 +112,7 @@ export default function EditProfilePage() {
                 </button>
                 <button
                   onClick={() => router.push("/profile")}
-                  className="px-5 py-2 border border-slate-300 rounded-md hover:bg-slate-50 transition"
+                  className="px-5 py-2 border border-slate-700 bg-slate-800 text-slate-100 rounded-md hover:bg-slate-700 transition"
                 >
                   Cancel
                 </button>

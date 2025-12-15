@@ -29,6 +29,7 @@ export default function AnswerForm() {
   const [previews, setPreviews] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bodyError, setBodyError] = useState<string | null>(null);
   const [hasHeicFiles, setHasHeicFiles] = useState(false);
 
   // Check for HEIC files whenever files change
@@ -62,9 +63,12 @@ export default function AnswerForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setBodyError(null);
     
-    if (!body) {
+    const trimmedBody = body.trim();
+    if (!trimmedBody) {
       setError("Answer body cannot be empty.");
+      setBodyError("Answer body cannot be empty.");
       return;
     }
 
@@ -92,7 +96,7 @@ export default function AnswerForm() {
         .insert({
           question_id: questionId,
           author_id: author_id,
-          body,
+          body: trimmedBody,
         })
         .select()
         .single();
@@ -158,12 +162,16 @@ export default function AnswerForm() {
                 </label>
                 <textarea
                   value={body}
-                  onChange={(e) => setBody(e.target.value)}
+                  onChange={(e) => {
+                    setBody(e.target.value);
+                    if (bodyError) setBodyError(null);
+                  }}
                   rows={10}
                   placeholder="Type your answer here..."
                   className="w-full rounded-md border border-slate-700 bg-slate-800 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 text-lg resize-vertical text-slate-50 placeholder:text-slate-500"
                   required
                 />
+                {bodyError && <p className="text-sm text-red-300 mt-1">{bodyError}</p>}
               </div>
 
               <div>
