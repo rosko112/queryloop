@@ -54,7 +54,7 @@ export default function HomePage() {
           .select("*")
           .eq("is_public", true)
           .order("created_at", { ascending: false })
-          .limit(5);
+          .limit(3);
 
         if (qError || !questionsData) throw qError;
 

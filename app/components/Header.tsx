@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 interface User {
   id: string;
   username: string;
+  display_name?: string | null;
   email: string;
   is_admin: boolean;
 }
@@ -27,19 +28,26 @@ export default function Header() {
         return;
       }
 
-      const { data: dbUser } = await supabase
+      const { data: dbUser, error } = await supabase
         .from("users")
-        .select("id, username, email, is_admin")
+        .select("id, username, display_name, email, is_admin")
         .eq("id", authUser.id)
-        .single();
+        .maybeSingle();
 
       if (dbUser) {
         setUser({
           id: dbUser.id,
           username: dbUser.username,
+          display_name: dbUser.display_name,
           email: dbUser.email,
           is_admin: dbUser.is_admin,
         });
+      } else {
+        // If the profile row is missing, keep auth session but avoid hard failures
+        setUser(null);
+        if (error) {
+          console.warn("Header user fetch:", error.message);
+        }
       }
     };
 
@@ -89,7 +97,7 @@ export default function Header() {
                 aria-label="View profile"
               >
                 <span aria-hidden="true">👤</span>
-                <span>{user.username}</span>
+                <span>{user.display_name || user.username || user.email}</span>
               </Link>
             </>
           ) : (
@@ -113,3 +121,4 @@ export default function Header() {
     </header>
   );
 }
+
