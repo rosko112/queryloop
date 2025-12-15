@@ -273,8 +273,6 @@ export default function AskQuestionForm() {
                     multiple
                     accept="image/*"
                     onChange={handleFileChange}
-                    multiple
-                    accept="image/*"
                     className="w-full text-sm text-slate-200 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border border-slate-700 file:border-slate-700 file:text-sm file:font-semibold file:bg-slate-800 file:text-indigo-200 hover:file:bg-slate-700"
                   />
                   <p className="text-xs text-slate-400 mt-1">
