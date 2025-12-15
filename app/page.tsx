@@ -12,6 +12,8 @@ interface Question {
   author_id: string;
   created_at: string;
   score: number;
+  votes_up?: number;
+  votes_down?: number;
 }
 
 interface Tag {
@@ -74,10 +76,27 @@ export default function HomePage() {
           tagsMap[qt.question_id].push(qt.tags);
         });
 
+        // Votes counts
+        const voteUpMap: Record<string, number> = {};
+        const voteDownMap: Record<string, number> = {};
+        if (questionIds.length > 0) {
+          const { data: voteRows } = await supabase
+            .from("votes")
+            .select("target_id, value")
+            .eq("target_type", "question")
+            .in("target_id", questionIds);
+          voteRows?.forEach(v => {
+            if (v.value === 1) voteUpMap[v.target_id] = (voteUpMap[v.target_id] || 0) + 1;
+            if (v.value === -1) voteDownMap[v.target_id] = (voteDownMap[v.target_id] || 0) + 1;
+          });
+        }
+
         const questionsWithDetails = questionsData.map(q => ({
           ...q,
           username: usersMap[q.author_id] || "Unknown",
           tags: tagsMap[q.id] || [],
+          votes_up: voteUpMap[q.id] || 0,
+          votes_down: voteDownMap[q.id] || 0,
         }));
 
         setQuestions(questionsWithDetails);
@@ -195,14 +214,19 @@ export default function HomePage() {
                 ) : (
                   <ul className="space-y-3">
                     {questions.map((q) => (
-                      <li key={q.id} className="p-4 rounded-xl bg-slate-800 border border-slate-700 hover:border-indigo-400/60 transition">
+                      <li
+                        key={q.id}
+                        className="p-4 rounded-xl bg-slate-800 border border-slate-700 hover:border-indigo-400/60 transition cursor-pointer"
+                        onClick={() => router.push(`/question/${q.id}`)}
+                      >
                         <div className="flex justify-between items-start gap-3">
                           <div className="flex-1">
-                            <Link href={`/question/${q.id}`} className="text-white font-semibold hover:text-indigo-200">
+                            <div className="text-white font-semibold hover:text-indigo-200">
                               {q.title}
-                            </Link>
+                            </div>
                             <p className="text-xs text-slate-400 mt-1">
-                              {q.score} votes • Asked by {q.username} on {new Date(q.created_at).toLocaleDateString()}
+                              ↑ {q.votes_up ?? 0} • ↓ {q.votes_down ?? 0} • Asked by {q.username} on{" "}
+                              {new Date(q.created_at).toLocaleDateString()}
                             </p>
                           </div>
                           <div className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-200">
@@ -215,7 +239,10 @@ export default function HomePage() {
                               <span
                                 key={tag.id}
                                 className="inline-flex items-center gap-1 bg-indigo-500/15 text-indigo-200 px-3 py-1 rounded-full text-xs font-medium border border-indigo-400/30 cursor-pointer hover:border-indigo-300"
-                                onClick={() => router.push(`/question?tag=${encodeURIComponent(tag.id)}`)}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  router.push(`/question?tag=${encodeURIComponent(tag.id)}`);
+                                }}
                               >
                                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>
                                 {tag.name}

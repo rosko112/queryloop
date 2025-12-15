@@ -80,28 +80,28 @@ export default function LoginPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-6">
-        <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
-          <h1 className="text-2xl font-semibold mb-6 text-center text-black">Login</h1>
+      <main className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-6 text-slate-50">
+        <div className="w-full max-w-md bg-slate-900/70 rounded-xl shadow-lg p-8 border border-slate-700">
+          <h1 className="text-2xl font-semibold mb-6 text-center text-white">Login</h1>
 
-          {error && <div className="text-red-500 text-sm mb-4 text-center">{error}</div>}
-          {success && <div className="text-green-400 text-sm mb-4 text-center">{success}</div>}
+          {error && <div className="text-red-100 text-sm mb-4 text-center bg-red-500/10 border border-red-400/40 rounded-md p-3">{error}</div>}
+          {success && <div className="text-green-100 text-sm mb-4 text-center bg-green-500/10 border border-green-400/40 rounded-md p-3">{success}</div>}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Email</label>
+              <label className="block text-sm font-medium text-slate-200">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="...@gmail.com"
-                className="mt-1 w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200 text-black"
+                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 text-slate-50 placeholder:text-slate-500"
               />
             </div>
 
             <div className="relative">
-              <label className="block text-sm font-medium text-gray-700">Password</label>
+              <label className="block text-sm font-medium text-slate-200">Password</label>
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
@@ -109,12 +109,12 @@ export default function LoginPage() {
                 required
                 placeholder="••••••••"
                 minLength={6}
-                className="mt-1 w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200 text-black"
+                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 text-slate-50 placeholder:text-slate-500"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((s) => !s)}
-                className="absolute right-2 top-9 text-sm text-gray-500 hover:text-gray-700"
+                className="absolute right-2 top-9 text-sm text-slate-400 hover:text-slate-200"
               >
                 {showPassword ? "Hide" : "Show"}
               </button>
@@ -131,9 +131,9 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-gray-600">
+          <p className="mt-6 text-center text-sm text-slate-400">
             Don't have an account?{" "}
-            <Link href="/register" className="text-indigo-600 hover:underline">
+            <Link href="/register" className="text-indigo-200 hover:underline">
               Create one
             </Link>
           </p>

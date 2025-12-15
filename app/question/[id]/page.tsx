@@ -56,7 +56,8 @@ export default function QuestionPage() {
   const supabase = createClientComponentClient();
   const router = useRouter();
   const params = useParams();
-  const questionId = params?.id;
+  const rawQuestionId = params?.id;
+  const questionId = Array.isArray(rawQuestionId) ? rawQuestionId[0] : rawQuestionId;
 
   const [question, setQuestion] = useState<Question | null>(null);
   const [author, setAuthor] = useState<User | null>(null);
@@ -68,9 +69,13 @@ export default function QuestionPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserIsAdmin, setCurrentUserIsAdmin] = useState(false);
   const [questionScore, setQuestionScore] = useState(0);
+  const [questionUpvotes, setQuestionUpvotes] = useState(0);
+  const [questionDownvotes, setQuestionDownvotes] = useState(0);
   const [questionUserVote, setQuestionUserVote] = useState<1 | -1 | 0>(0);
   const [answerScores, setAnswerScores] = useState<Record<string, number>>({});
   const [answerUserVotes, setAnswerUserVotes] = useState<Record<string, 1 | -1 | 0>>({});
+  const [answerUpvotes, setAnswerUpvotes] = useState<Record<string, number>>({});
+  const [answerDownvotes, setAnswerDownvotes] = useState<Record<string, number>>({});
   const [favoriteCount, setFavoriteCount] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
   const [answerBody, setAnswerBody] = useState("");
@@ -152,11 +157,16 @@ export default function QuestionPage() {
 
       // Question votes
       const { data: qVotes } = await supabase
-        .from("question_votes")
+        .from("votes")
         .select("user_id, value")
-        .eq("question_id", questionId);
+        .eq("target_type", "question")
+        .eq("target_id", questionId);
       const qScore = (qVotes || []).reduce((sum, v) => sum + (v.value || 0), 0);
+      const qUp = (qVotes || []).filter(v => v.value === 1).length;
+      const qDown = (qVotes || []).filter(v => v.value === -1).length;
       setQuestionScore(qScore);
+      setQuestionUpvotes(qUp);
+      setQuestionDownvotes(qDown);
       if (viewerId) {
         const existing = (qVotes || []).find(v => v.user_id === viewerId);
         setQuestionUserVote(existing?.value as 1 | -1 | 0 || 0);
@@ -236,23 +246,33 @@ export default function QuestionPage() {
       // Answer votes
       if (answerIds.length > 0) {
         const { data: aVotes } = await supabase
-          .from("answer_votes")
-          .select("answer_id, user_id, value")
-          .in("answer_id", answerIds);
+          .from("votes")
+          .select("target_id, user_id, value")
+          .eq("target_type", "answer")
+          .in("target_id", answerIds);
 
         const scoreMap: Record<string, number> = {};
         const userVoteMap: Record<string, 1 | -1 | 0> = {};
+        const upMap: Record<string, number> = {};
+        const downMap: Record<string, number> = {};
         (aVotes || []).forEach(v => {
-          scoreMap[v.answer_id] = (scoreMap[v.answer_id] || 0) + (v.value || 0);
+          const voteAnswerId = (v as any).answer_id || (v as any).target_id;
+          scoreMap[voteAnswerId] = (scoreMap[voteAnswerId] || 0) + (v.value || 0);
+          if (v.value === 1) upMap[voteAnswerId] = (upMap[voteAnswerId] || 0) + 1;
+          if (v.value === -1) downMap[voteAnswerId] = (downMap[voteAnswerId] || 0) + 1;
           if (viewerId && v.user_id === viewerId) {
-            userVoteMap[v.answer_id] = v.value as 1 | -1 | 0;
+            userVoteMap[voteAnswerId] = v.value as 1 | -1 | 0;
           }
         });
         setAnswerScores(scoreMap);
         setAnswerUserVotes(userVoteMap);
+        setAnswerUpvotes(upMap);
+        setAnswerDownvotes(downMap);
       } else {
         setAnswerScores({});
         setAnswerUserVotes({});
+        setAnswerUpvotes({});
+        setAnswerDownvotes({});
       }
 
       const answersWithDetails = (answersData || []).map(answer => ({
@@ -364,14 +384,54 @@ export default function QuestionPage() {
     const user = await requireAuth();
     if (!user || !questionId) return;
 
-    const nextVote = questionUserVote === value ? 0 : value;
+    const prevVoteWasUp = questionUserVote === 1;
+    const prevVote = questionUserVote;
+    const nextVote = prevVote === value ? 0 : value;
     setQuestionUserVote(nextVote);
-    setQuestionScore(prev => prev - questionUserVote + nextVote);
+    setQuestionScore(prev => prev - prevVote + nextVote);
+    setQuestionUpvotes(prev => prev + (nextVote === 1 ? 1 : 0) - (prevVote === 1 ? 1 : 0));
+    setQuestionDownvotes(prev => prev + (nextVote === -1 ? 1 : 0) - (prevVote === -1 ? 1 : 0));
 
-    if (nextVote === 0) {
-      await supabase.from("question_votes").delete().eq("question_id", questionId).eq("user_id", user.id);
-    } else {
-      await supabase.from("question_votes").upsert({ question_id: questionId, user_id: user.id, value: nextVote });
+    const repDelta = (nextVote === 1 ? 1 : 0) - (prevVoteWasUp ? 1 : 0);
+
+    try {
+      if (nextVote === 0) {
+        await supabase
+          .from("votes")
+          .delete()
+          .eq("target_type", "question")
+          .eq("target_id", questionId)
+          .eq("user_id", user.id);
+      } else {
+        await supabase.from("votes").upsert({
+          target_type: "question",
+          target_id: questionId,
+          user_id: user.id,
+          value: nextVote,
+        });
+      }
+
+      if (repDelta !== 0 && question?.author_id) {
+        const { data: authorRow } = await supabase
+          .from("users")
+          .select("reputation")
+          .eq("id", question.author_id)
+          .single();
+        if (authorRow) {
+          await supabase
+            .from("users")
+            .update({ reputation: (authorRow.reputation || 0) + repDelta })
+            .eq("id", question.author_id);
+        }
+      }
+    } catch (err) {
+      // revert on error
+      setQuestionUserVote(prevVote);
+      setQuestionScore(prev => prev - nextVote + prevVote);
+      setQuestionUpvotes(prev => prev - (nextVote === 1 ? 1 : 0) + (prevVote === 1 ? 1 : 0));
+      setQuestionDownvotes(prev => prev - (nextVote === -1 ? 1 : 0) + (prevVote === -1 ? 1 : 0));
+      console.error(err);
+      setError("Failed to save your vote. Please try again.");
     }
   };
 
@@ -383,11 +443,45 @@ export default function QuestionPage() {
     const nextVote = current === value ? 0 : value;
     setAnswerUserVotes(prev => ({ ...prev, [answerId]: nextVote }));
     setAnswerScores(prev => ({ ...prev, [answerId]: (prev[answerId] || 0) - current + nextVote }));
+    setAnswerUpvotes(prev => ({
+      ...prev,
+      [answerId]: (prev[answerId] || 0) + (nextVote === 1 ? 1 : 0) - (current === 1 ? 1 : 0),
+    }));
+    setAnswerDownvotes(prev => ({
+      ...prev,
+      [answerId]: (prev[answerId] || 0) + (nextVote === -1 ? 1 : 0) - (current === -1 ? 1 : 0),
+    }));
 
-    if (nextVote === 0) {
-      await supabase.from("answer_votes").delete().eq("answer_id", answerId).eq("user_id", user.id);
-    } else {
-      await supabase.from("answer_votes").upsert({ answer_id: answerId, user_id: user.id, value: nextVote });
+    try {
+      if (nextVote === 0) {
+        await supabase
+          .from("votes")
+          .delete()
+          .eq("target_type", "answer")
+          .eq("target_id", answerId)
+          .eq("user_id", user.id);
+      } else {
+        await supabase.from("votes").upsert({
+          target_type: "answer",
+          target_id: answerId,
+          user_id: user.id,
+          value: nextVote,
+        });
+      }
+    } catch (err) {
+      // revert on error
+      setAnswerUserVotes(prev => ({ ...prev, [answerId]: current }));
+      setAnswerScores(prev => ({ ...prev, [answerId]: (prev[answerId] || 0) - nextVote + current }));
+      setAnswerUpvotes(prev => ({
+        ...prev,
+        [answerId]: (prev[answerId] || 0) - (nextVote === 1 ? 1 : 0) + (current === 1 ? 1 : 0),
+      }));
+      setAnswerDownvotes(prev => ({
+        ...prev,
+        [answerId]: (prev[answerId] || 0) - (nextVote === -1 ? 1 : 0) + (current === -1 ? 1 : 0),
+      }));
+      console.error(err);
+      setAnswerError("Failed to save your vote. Please try again.");
     }
   };
 
@@ -443,7 +537,10 @@ export default function QuestionPage() {
 
       await supabase.from("favorites").delete().eq("question_id", questionId);
       await supabase.from("questions_tags").delete().eq("question_id", questionId);
-      await supabase.from("question_votes").delete().eq("question_id", questionId);
+      await supabase.from("votes").delete().eq("target_type", "question").eq("target_id", questionId);
+      if (answerIds.length > 0) {
+        await supabase.from("votes").delete().eq("target_type", "answer").in("target_id", answerIds);
+      }
       await supabase.from("questions").delete().eq("id", questionId);
 
       router.push("/question");
@@ -478,8 +575,11 @@ export default function QuestionPage() {
                 >
                   ▲ Upvote
                 </button>
-                <div className="text-lg font-semibold text-slate-700 min-w-[40px] text-center text-white">
-                  {questionScore}
+                <div className="flex flex-col items-center min-w-[60px] text-white">
+                  <div className="text-lg font-semibold">{questionScore}</div>
+                  <div className="text-[11px] text-slate-300">
+                    ↑ {questionUpvotes} · ↓ {questionDownvotes}
+                  </div>
                 </div>
                 <button
                   onClick={() => handleQuestionVote(-1)}
@@ -623,8 +723,13 @@ export default function QuestionPage() {
                         >
                           ▲
                         </button>
-                        <div className="text-sm font-semibold text-slate-100">
-                          {answerScores[answer.id] || 0}
+                        <div className="flex flex-col items-center text-slate-100">
+                          <div className="text-sm font-semibold">
+                            {answerScores[answer.id] || 0}
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            ↑ {answerUpvotes[answer.id] || 0} · ↓ {answerDownvotes[answer.id] || 0}
+                          </div>
                         </div>
                         <button
                           onClick={() => handleAnswerVote(answer.id, -1)}

@@ -5,6 +5,7 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/app/components/Header";
+import AdminSkeleton from "@/app/components/AdminSkeleton";
 
 interface User {
   id: string;
@@ -32,7 +33,10 @@ export default function AdminPage() {
   const [checkingAdmin, setCheckingAdmin] = useState(true);
   const [userPage, setUserPage] = useState(1);
   const [userTotal, setUserTotal] = useState(0);
+  const [questionPage, setQuestionPage] = useState(1);
+  const [questionTotal, setQuestionTotal] = useState(0);
   const pageSize = 10;
+  const questionPageSize = 10;
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -84,15 +88,26 @@ export default function AdminPage() {
 
   useEffect(() => {
     const fetchQuestions = async () => {
-      const { data } = await supabase
+      const from = (questionPage - 1) * questionPageSize;
+      const to = from + questionPageSize - 1;
+
+      const { data, count, error } = await supabase
         .from("questions")
-        .select("id, title, created_at, is_public")
+        .select("id, title, created_at, is_public", { count: "exact" })
         .order("created_at", { ascending: false })
-        .limit(20);
-      setQuestions(data || []);
+        .range(from, to);
+
+      if (error) {
+        console.error(error);
+        setQuestions([]);
+        setQuestionTotal(0);
+      } else {
+        setQuestions(data || []);
+        if (typeof count === "number") setQuestionTotal(count);
+      }
     };
     if (!checkingAdmin) fetchQuestions();
-  }, [checkingAdmin, supabase]);
+  }, [checkingAdmin, supabase, questionPage]);
 
   const handleDelete = async (id: string) => {
   if (!confirm("Are you sure you want to permanently delete this user?")) return;
@@ -124,10 +139,10 @@ const toggleAdmin = async (id: string, is_admin: boolean) => {
   fetchUsers(userPage);
 };
 
-  if (checkingAdmin || (usersLoading && users.length === 0))
-    return <p className="pt-32 text-center text-slate-400 text-lg">Loading...</p>;
+  if (checkingAdmin || (usersLoading && users.length === 0)) return <AdminSkeleton />;
 
   const totalPages = Math.max(1, Math.ceil(userTotal / pageSize));
+  const questionTotalPages = Math.max(1, Math.ceil(questionTotal / questionPageSize || 1));
 
   return (
     <>
@@ -223,26 +238,49 @@ const toggleAdmin = async (id: string, is_admin: boolean) => {
             {questions.length === 0 ? (
               <p className="text-sm text-slate-400">No questions found.</p>
             ) : (
-              <ul className="space-y-3">
-                {questions.map(q => (
-                  <li key={q.id} className="p-3 bg-slate-900/50 border border-slate-700 rounded-md flex items-center justify-between">
-                    <div>
-                      <p className="text-indigo-200 font-semibold">{q.title}</p>
-                      <p className="text-xs text-slate-400">
-                        {new Date(q.created_at).toLocaleDateString()} • {q.is_public ? "Public" : "Pending"}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        className="px-3 py-1 text-sm bg-slate-800 border border-slate-700 text-slate-100 rounded-md hover:bg-slate-700"
-                        onClick={() => router.push(`/question/${q.id}`)}
-                      >
-                        View
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <ul className="space-y-3">
+                  {questions.map(q => (
+                    <li key={q.id} className="p-3 bg-slate-900/50 border border-slate-700 rounded-md flex items-center justify-between">
+                      <div>
+                        <p className="text-indigo-200 font-semibold">{q.title}</p>
+                        <p className="text-xs text-slate-400">
+                          {new Date(q.created_at).toLocaleDateString()} • {q.is_public ? "Public" : "Pending"}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          className="px-3 py-1 text-sm bg-slate-800 border border-slate-700 text-slate-100 rounded-md hover:bg-slate-700"
+                          onClick={() => router.push(`/question/${q.id}`)}
+                        >
+                          View
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex items-center justify-between mt-4 text-sm text-slate-200">
+                  <span>
+                    Page {questionPage} of {questionTotalPages} {questionTotal ? `(Total: ${questionTotal})` : ""}
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setQuestionPage(Math.max(1, questionPage - 1))}
+                      disabled={questionPage === 1}
+                      className="px-3 py-1 rounded-md border border-slate-700 bg-slate-800 hover:bg-slate-700 disabled:opacity-50"
+                    >
+                      Prev
+                    </button>
+                    <button
+                      onClick={() => setQuestionPage(Math.min(questionTotalPages, questionPage + 1))}
+                      disabled={questionPage >= questionTotalPages}
+                      className="px-3 py-1 rounded-md border border-slate-700 bg-slate-800 hover:bg-slate-700 disabled:opacity-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </section>

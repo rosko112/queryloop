@@ -149,48 +149,55 @@ export default function AskQuestionForm() {
   return (
     <>
       <Header />
-      <main className="pt-24 min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-slate-800">
+      <main className="pt-24 min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-slate-50">
         <section className="max-w-7xl mx-auto px-6 py-12 flex-1">
-          <div className="bg-white rounded-xl shadow-lg p-10 border border-slate-100">
-            <h1 className="text-3xl font-bold mb-6">Ask a Question</h1>
-            {error && <p className="text-red-600 mb-4 bg-red-50 p-3 rounded-md">{error}</p>}
+          <div className="bg-slate-900/70 rounded-xl shadow-lg p-10 border border-slate-700">
+            <h1 className="text-3xl font-bold mb-6 text-white">Ask a Question</h1>
+            {error && (
+              <p className="text-red-100 mb-4 bg-red-500/15 border border-red-400/50 p-3 rounded-md">
+                {error}
+              </p>
+            )}
 
             <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div className="flex flex-col gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Title</label>
+                  <label className="block text-sm font-medium text-slate-200">Title</label>
                   <input
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     required
                     placeholder="Enter your question title"
-                    className="mt-2 w-full rounded-md border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-200 text-lg"
+                    className="mt-2 w-full rounded-md border border-slate-700 bg-slate-800 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 text-lg text-slate-50 placeholder:text-slate-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Body</label>
+                  <label className="block text-sm font-medium text-slate-200">Body</label>
                   <textarea
                     value={body}
                     onChange={(e) => setBody(e.target.value)}
                     required
                     rows={10}
                     placeholder="Describe your question in detail"
-                    className="mt-2 w-full rounded-md border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-200 text-lg"
+                    className="mt-2 w-full rounded-md border border-slate-700 bg-slate-800 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 text-lg text-slate-50 placeholder:text-slate-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Tags</label>
+                  <label className="block text-sm font-medium text-slate-200">Tags</label>
                   <div className="flex gap-2 mt-2 flex-wrap">
                     {tags.map((tag) => (
-                      <span key={tag} className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-sm flex items-center gap-1">
+                      <span
+                        key={tag}
+                        className="bg-indigo-500/10 text-indigo-200 px-3 py-1 rounded-full text-sm flex items-center gap-1 border border-indigo-500/30"
+                      >
                         {tag}
                         <button
                           type="button"
                           onClick={() => handleRemoveTag(tag)}
-                          className="text-red-500 hover:text-red-700 text-xs font-bold"
+                          className="text-red-300 hover:text-red-200 text-xs font-bold"
                         >
                           ×
                         </button>
@@ -203,7 +210,7 @@ export default function AskQuestionForm() {
                       value={tagInput}
                       onChange={(e) => setTagInput(e.target.value)}
                       placeholder="Add a tag and press Enter"
-                      className="flex-1 rounded-md border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200 text-sm"
+                      className="flex-1 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 text-sm text-slate-50 placeholder:text-slate-500"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
@@ -225,7 +232,7 @@ export default function AskQuestionForm() {
               {/* Right column: attachments + submit */}
               <div className="flex flex-col gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
                     Attach Images
                   </label>
                   <input
@@ -233,17 +240,17 @@ export default function AskQuestionForm() {
                     multiple
                     accept="image/*"
                     onChange={handleFileChange}
-                    className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                    className="w-full text-sm text-slate-200 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border border-slate-700 file:border-slate-700 file:text-sm file:font-semibold file:bg-slate-800 file:text-indigo-200 hover:file:bg-slate-700"
                   />
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-slate-400 mt-1">
                     HEIC files are not supported. Please convert to JPEG or PNG before uploading.
                   </p>
                 </div>
 
                 {hasHeicFiles && (
-                  <div className="bg-red-50 border border-red-200 rounded-md p-3">
-                    <p className="text-red-600 font-medium">HEIC files are not allowed!</p>
-                    <p className="text-red-500 text-sm mt-1">
+                  <div className="bg-red-500/10 border border-red-400/40 rounded-md p-3">
+                    <p className="text-red-100 font-medium">HEIC files are not allowed!</p>
+                    <p className="text-red-200 text-sm mt-1">
                       Please remove all HEIC files before submitting your question.
                     </p>
                   </div>
@@ -251,7 +258,7 @@ export default function AskQuestionForm() {
 
                 {previews.length > 0 && (
                   <div>
-                    <h3 className="text-sm font-medium text-slate-700 mb-3">Image Previews</h3>
+                    <h3 className="text-sm font-medium text-slate-200 mb-3">Image Previews</h3>
                     <div className="flex flex-wrap gap-4">
                       {previews.map((src, index) => {
                         const isHeicFile =
@@ -269,7 +276,7 @@ export default function AskQuestionForm() {
                             />
                             {isHeicFile && (
                               <div className="absolute inset-0 bg-red-500 bg-opacity-20 rounded-md flex items-center justify-center">
-                                <span className="text-red-600 font-bold text-sm bg-white bg-opacity-90 px-2 py-1 rounded">
+                                <span className="text-red-100 font-bold text-sm bg-slate-900/90 px-2 py-1 rounded">
                                   HEIC
                                 </span>
                               </div>
@@ -283,7 +290,7 @@ export default function AskQuestionForm() {
                             </button>
                             <div
                               className={`text-xs mt-1 truncate max-w-32 ${
-                                isHeicFile ? "text-red-600 font-medium" : "text-slate-500"
+                                isHeicFile ? "text-red-200 font-medium" : "text-slate-400"
                               }`}
                             >
                               {files[index]?.name}
@@ -305,7 +312,7 @@ export default function AskQuestionForm() {
                 >
                   {loading ? "Posting..." : "Post Question"}
                 </button>
-                <p className="text-xs text-slate-500 text-center">
+                <p className="text-xs text-slate-400 text-center">
                   New questions are reviewed by an admin before they go live.
                 </p>
               </div>

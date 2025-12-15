@@ -112,15 +112,15 @@ export default function RegisterPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen flex flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 pt-24 p-6">
-        <div className="w-full max-w-md mx-auto bg-white/90 backdrop-blur-sm border border-slate-100 rounded-xl shadow-lg p-8">
-        <p className="text-2xl font-semibold mb-6 text-center text-black">Create your account</p>
-          {error && <div className="text-sm text-rose-400">{error}</div>}
-          {success && <div className="text-sm text-green-300">{success}</div>}
+      <main className="min-h-screen flex flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 pt-24 p-6 text-slate-50">
+        <div className="w-full max-w-md mx-auto bg-slate-900/70 backdrop-blur-sm border border-slate-700 rounded-xl shadow-lg p-8">
+        <p className="text-2xl font-semibold mb-6 text-center text-white">Create your account</p>
+          {error && <div className="text-sm text-rose-100 bg-rose-500/10 border border-rose-400/40 rounded-md p-3">{error}</div>}
+          {success && <div className="text-sm text-green-100 bg-green-500/10 border border-green-400/40 rounded-md p-3">{success}</div>}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <label className="block">
-              <span className="text-sm font-medium text-slate-700">Username</span>
+              <span className="text-sm font-medium text-slate-200">Username</span>
               <input
                 type="text"
                 name="username"
@@ -128,13 +128,13 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 placeholder="johndoe"
                 required
-                className="text-black mt-1 w-full rounded-md border border-black px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 text-slate-50 placeholder:text-slate-500"
                 minLength={3}
               />
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium text-slate-700">Display Name</span>
+              <span className="text-sm font-medium text-slate-200">Display Name</span>
               <input
                 type="text"
                 name="displayName"
@@ -142,13 +142,13 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 placeholder="John Doe"
                 required
-                className="text-black mt-1 w-full rounded-md border border-black px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 text-slate-50 placeholder:text-slate-500"
                 minLength={2}
               />
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium text-slate-700">Email</span>
+              <span className="text-sm font-medium text-slate-200">Email</span>
               <input
                 type="email"
                 name="email"
@@ -156,12 +156,12 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 placeholder="you@example.com"
                 required
-                className="text-black mt-1 w-full rounded-md border border-black px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 text-slate-50 placeholder:text-slate-500"
               />
             </label>
 
             <label className="block relative">
-              <span className="text-sm font-medium text-slate-700">Password</span>
+              <span className="text-sm font-medium text-slate-200">Password</span>
               <input
                 type={showPassword ? "text" : "password"}
                 name="password"
@@ -169,14 +169,14 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 placeholder="••••••••"
                 required
-                className="text-black mt-1 w-full rounded-md border border-black px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 text-slate-50 placeholder:text-slate-500"
                 minLength={8}
               />
-              <p className="text-xs text-slate-500 mt-1">Minimum 8 characters</p>
+              <p className="text-xs text-slate-400 mt-1">Minimum 8 characters</p>
             </label>
 
             <label className="block relative">
-              <span className="text-sm font-medium text-slate-700">Confirm Password</span>
+              <span className="text-sm font-medium text-slate-200">Confirm Password</span>
               <input
                 type={showPassword ? "text" : "password"}
                 name="confirmPassword"
@@ -184,12 +184,12 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 placeholder="••••••••"
                 required
-                className="text-black mt-1 w-full rounded-md border border-black px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 text-slate-50 placeholder:text-slate-500"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((s) => !s)}
-                className="absolute right-2 top-9 text-sm text-slate-500 hover:text-slate-700"
+                className="absolute right-2 top-9 text-sm text-slate-400 hover:text-slate-200"
               >
                 {showPassword ? "Hide" : "Show"}
               </button>
@@ -201,15 +201,15 @@ export default function RegisterPage() {
                 name="acceptTerms"
                 checked={formData.acceptTerms}
                 onChange={handleChange}
-                className="text-black h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                className="h-4 w-4 rounded border-slate-700 bg-slate-800 text-indigo-400 focus:ring-indigo-400/60"
               />
-              <span className="text-sm text-slate-600">
+              <span className="text-sm text-slate-400">
                 I agree to the{" "}
-                <Link href="/terms" className="text-indigo-600 hover:underline">
+                <Link href="/terms" className="text-indigo-200 hover:underline">
                   Terms of Service
                 </Link>{" "}
                 and{" "}
-                <Link href="/privacy" className="text-indigo-600 hover:underline">
+                <Link href="/privacy" className="text-indigo-200 hover:underline">
                   Privacy Policy
                 </Link>
               </span>

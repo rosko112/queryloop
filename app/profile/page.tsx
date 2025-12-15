@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
 import Header from "@/app/components/Header";
+import ProfileSkeleton from "@/app/components/ProfileSkeleton";
 
 interface UserProfile {
   id: string;
@@ -58,6 +59,9 @@ export default function ProfilePage() {
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+  const qTotalPages = Math.max(1, Math.ceil(qTotal / pageSize));
+  const aTotalPages = Math.max(1, Math.ceil(aTotal / pageSize));
+  const fTotalPages = Math.max(1, Math.ceil(fTotal / pageSize));
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -165,6 +169,41 @@ export default function ProfilePage() {
     fetchFavorites(fPage, user.id);
   }, [user, fPage]);
 
+  const Pagination = ({
+    current,
+    total,
+    onChange,
+  }: {
+    current: number;
+    total: number;
+    onChange: (page: number) => void;
+  }) => {
+    if (total <= 1) return null;
+    const pages = Array.from({ length: total }, (_, i) => i + 1);
+    return (
+      <div className="mt-3 flex items-center justify-between text-sm">
+        <div className="flex gap-2">
+          {pages.map(p => (
+            <button
+              key={p}
+              onClick={() => onChange(p)}
+              className={`px-3 py-1 rounded-md border ${
+                p === current
+                  ? "bg-indigo-600 text-white border-indigo-500"
+                  : "border-slate-300 text-slate-700 hover:bg-slate-100"
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+        <span className="text-slate-500">
+          Page {current} of {total}
+        </span>
+      </div>
+    );
+  };
+
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordMessage(null);
@@ -192,44 +231,41 @@ export default function ProfilePage() {
     router.push("/login");
   };
 
-  if (loading) return <p className="pt-32 text-center text-slate-500 text-lg">Loading profile...</p>;
+  if (loading) return <ProfileSkeleton />;
   if (!user) return <p className="pt-32 text-center text-slate-500 text-lg">User not found.</p>;
 
   return (
     <>
       <Header />
-      <main className="pt-24 min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-slate-800">
+      <main className="pt-24 min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-slate-50">
         <section className="max-w-5xl mx-auto px-6 py-12">
-          <div className="bg-white rounded-lg shadow-md border border-slate-200 p-8">
-            <h1 className="text-3xl font-extrabold text-indigo-600 mb-6">Your Profile</h1>
+          <div className="bg-slate-900/70 rounded-lg shadow-md border border-slate-700 p-8">
+            <h1 className="text-3xl font-extrabold text-white mb-6">Your Profile</h1>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
                 <p>
-                  <span className="font-semibold text-indigo-500">Username:</span> {user.username}
+                  <span className="font-semibold text-indigo-200">Username:</span> {user.username}
                 </p>
                 <p>
-                  <span className="font-semibold text-indigo-500">Display Name:</span>{" "}
+                  <span className="font-semibold text-indigo-200">Display Name:</span>{" "}
                   {user.display_name ?? "Not set"}
                 </p>
                 <p>
-                  <span className="font-semibold text-indigo-500">Email:</span> {user.email}
+                  <span className="font-semibold text-indigo-200">Email:</span> {user.email}
                 </p>
                 <p>
-                  <span className="font-semibold text-indigo-500">Reputation:</span> {user.reputation}
-                </p>
-                <p>
-                  <span className="font-semibold text-indigo-500">Member since:</span>{" "}
+                  <span className="font-semibold text-indigo-200">Member since:</span>{" "}
                   {new Date(user.created_at).toLocaleDateString()}
                 </p>
                 {user.is_admin && (
-                  <p className="text-sm text-red-600 font-semibold mt-2">Admin User</p>
+                  <p className="text-sm text-amber-300 font-semibold mt-2">Admin User</p>
                 )}
               </div>
 
               <div>
-                <p className="font-semibold text-indigo-500 mb-2">Bio:</p>
-                <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-100 text-slate-700 min-h-[120px]">
+                <p className="font-semibold text-indigo-200 mb-2">Bio:</p>
+                <div className="p-4 bg-slate-800 rounded-lg border border-slate-700 text-slate-100 min-h-[120px]">
                   {user.bio ?? "No bio added."}
                 </div>
               </div>
@@ -244,7 +280,7 @@ export default function ProfilePage() {
               </button>
               <button
                 onClick={() => document.getElementById("favourites-section")?.scrollIntoView({ behavior: "smooth" })}
-                className="px-5 py-2 bg-amber-100 text-amber-800 rounded-md shadow hover:bg-amber-200 transition"
+                className="px-5 py-2 bg-amber-500/20 text-amber-200 border border-amber-400/50 rounded-md shadow hover:bg-amber-500/30 transition"
               >
                 My Favourites
               </button>
@@ -259,30 +295,30 @@ export default function ProfilePage() {
               <button
                 onClick={handleLogout}
                 disabled={loggingOut}
-                className="px-5 py-2 bg-slate-100 text-slate-700 rounded-md shadow hover:bg-slate-200 transition disabled:opacity-50"
+                className="px-5 py-2 bg-slate-800 text-slate-100 rounded-md shadow border border-slate-700 hover:bg-slate-700 transition disabled:opacity-50"
               >
                 {loggingOut ? "Logging out..." : "Logout"}
               </button>
             </div>
 
             <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="border border-slate-200 rounded-lg p-4">
-                <h2 className="text-lg font-semibold mb-3">Your Questions</h2>
+              <div className="border border-slate-700 bg-slate-800/70 rounded-lg p-4">
+                <h2 className="text-lg font-semibold mb-3 text-white">Your Questions</h2>
                 {questions.length === 0 ? (
-                  <p className="text-sm text-slate-500">You have not asked any questions yet.</p>
+                  <p className="text-sm text-slate-400">You have not asked any questions yet.</p>
                 ) : (
                   <ul className="space-y-3">
                     {questions.map(q => (
-                      <li key={q.id} className="p-3 border border-slate-100 rounded-md hover:shadow-sm transition">
+                      <li key={q.id} className="p-3 border border-slate-700 rounded-md bg-slate-900/50 hover:shadow-sm transition">
                         <div className="flex justify-between items-start gap-3">
                           <div>
-                            <p className="font-semibold text-indigo-600">{q.title}</p>
-                            <p className="text-xs text-slate-500">
+                            <p className="font-semibold text-indigo-200">{q.title}</p>
+                            <p className="text-xs text-slate-400">
                               {new Date(q.created_at).toLocaleDateString()} • Score {q.score}
                             </p>
                           </div>
                           <button
-                            className="text-sm text-indigo-600 hover:underline"
+                            className="text-sm text-indigo-300 hover:underline"
                             onClick={() => router.push(`/question/${q.id}`)}
                           >
                             View
@@ -292,49 +328,29 @@ export default function ProfilePage() {
                     ))}
                   </ul>
                 )}
-                {qTotal > pageSize && (
-                  <div className="mt-3 flex items-center justify-between text-sm">
-                    <button
-                      onClick={() => setQPage(Math.max(1, qPage - 1))}
-                      disabled={qPage === 1}
-                      className="px-3 py-1 rounded-md border text-slate-700 disabled:opacity-50"
-                    >
-                      Prev
-                    </button>
-                    <span className="text-slate-500">
-                      Page {qPage} of {Math.max(1, Math.ceil(qTotal / pageSize))}
-                    </span>
-                    <button
-                      onClick={() => setQPage(Math.min(Math.ceil(qTotal / pageSize), qPage + 1))}
-                      disabled={qPage >= Math.ceil(qTotal / pageSize)}
-                      className="px-3 py-1 rounded-md border text-slate-700 disabled:opacity-50"
-                    >
-                      Next
-                    </button>
-                  </div>
-                )}
+                <Pagination current={qPage} total={qTotalPages} onChange={setQPage} />
               </div>
 
-              <div className="border border-slate-200 rounded-lg p-4">
-                <h2 className="text-lg font-semibold mb-3">Your Answers</h2>
+              <div className="border border-slate-700 bg-slate-800/70 rounded-lg p-4">
+                <h2 className="text-lg font-semibold mb-3 text-white">Your Answers</h2>
                 {answers.length === 0 ? (
-                  <p className="text-sm text-slate-500">You have not posted any answers yet.</p>
+                  <p className="text-sm text-slate-400">You have not posted any answers yet.</p>
                 ) : (
                   <ul className="space-y-3">
                     {answers.map(a => (
-                      <li key={a.id} className="p-3 border border-slate-100 rounded-md hover:shadow-sm transition">
+                      <li key={a.id} className="p-3 border border-slate-700 rounded-md bg-slate-900/50 hover:shadow-sm transition">
                         <div className="flex justify-between items-start gap-3">
                           <div>
-                            <p className="font-semibold text-indigo-600">
+                            <p className="font-semibold text-indigo-200">
                               {a.questions?.title || "Question"}
                             </p>
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-slate-400">
                               {new Date(a.created_at).toLocaleDateString()}
                             </p>
-                            <p className="text-sm text-slate-700 mt-1 line-clamp-2">{a.body}</p>
+                            <p className="text-sm text-slate-100 mt-1 line-clamp-2">{a.body}</p>
                           </div>
                           <button
-                            className="text-sm text-indigo-600 hover:underline"
+                            className="text-sm text-indigo-300 hover:underline"
                             onClick={() => router.push(`/question/${a.question_id}`)}
                           >
                             View
@@ -344,78 +360,38 @@ export default function ProfilePage() {
                     ))}
                   </ul>
                 )}
-                {aTotal > pageSize && (
-                  <div className="mt-3 flex items-center justify-between text-sm">
-                    <button
-                      onClick={() => setAPage(Math.max(1, aPage - 1))}
-                      disabled={aPage === 1}
-                      className="px-3 py-1 rounded-md border text-slate-700 disabled:opacity-50"
-                    >
-                      Prev
-                    </button>
-                    <span className="text-slate-500">
-                      Page {aPage} of {Math.max(1, Math.ceil(aTotal / pageSize))}
-                    </span>
-                    <button
-                      onClick={() => setAPage(Math.min(Math.ceil(aTotal / pageSize), aPage + 1))}
-                      disabled={aPage >= Math.ceil(aTotal / pageSize)}
-                      className="px-3 py-1 rounded-md border text-slate-700 disabled:opacity-50"
-                    >
-                      Next
-                    </button>
-                  </div>
-                )}
+                <Pagination current={aPage} total={aTotalPages} onChange={setAPage} />
               </div>
             </div>
 
-            <div id="favourites-section" className="mt-10 border border-slate-200 rounded-lg p-4">
-              <h2 className="text-lg font-semibold mb-3">My Favourites</h2>
+            <div id="favourites-section" className="mt-10 border border-slate-700 bg-slate-800/70 rounded-lg p-4">
+              <h2 className="text-lg font-semibold mb-3 text-white">My Favourites</h2>
               {favorites.length === 0 ? (
-                <p className="text-sm text-slate-500">You have not favourited any questions yet.</p>
+                <p className="text-sm text-slate-400">You have not favourited any questions yet.</p>
               ) : (
                 <ul className="space-y-3">
                   {favorites.map(f => (
-                    <li key={f.question_id} className="p-3 border border-slate-100 rounded-md hover:shadow-sm transition flex items-start justify-between gap-3">
+                    <li key={f.question_id} className="p-3 border border-slate-700 rounded-md bg-slate-900/50 hover:shadow-sm transition flex items-start justify-between gap-3">
                       <div>
-                        <p className="font-semibold text-indigo-600">{f.title}</p>
+                        <p className="font-semibold text-indigo-200">{f.title}</p>
                         {f.created_at && (
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-slate-400">
                             Favourited question • {new Date(f.created_at).toLocaleDateString()}
                           </p>
                         )}
                       </div>
                       <button
-                        className="text-sm text-indigo-600 hover:underline"
+                        className="text-sm text-indigo-300 hover:underline"
                         onClick={() => router.push(`/question/${f.question_id}`)}
                       >
                         View
                       </button>
                     </li>
-                  ))}
-                </ul>
-              )}
-              {fTotal > pageSize && (
-                <div className="mt-3 flex items-center justify-between text-sm">
-                  <button
-                    onClick={() => setFPage(Math.max(1, fPage - 1))}
-                    disabled={fPage === 1}
-                    className="px-3 py-1 rounded-md border text-slate-700 disabled:opacity-50"
-                  >
-                    Prev
-                  </button>
-                  <span className="text-slate-500">
-                    Page {fPage} of {Math.max(1, Math.ceil(fTotal / pageSize))}
-                  </span>
-                  <button
-                    onClick={() => setFPage(Math.min(Math.ceil(fTotal / pageSize), fPage + 1))}
-                    disabled={fPage >= Math.ceil(fTotal / pageSize)}
-                    className="px-3 py-1 rounded-md border text-slate-700 disabled:opacity-50"
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
-            </div>
+              ))}
+            </ul>
+          )}
+          <Pagination current={fPage} total={fTotalPages} onChange={setFPage} />
+        </div>
 
             <div className="mt-10 border border-slate-200 rounded-lg p-4">
               <h2 className="text-lg font-semibold mb-3">Reset Password</h2>

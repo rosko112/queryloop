@@ -144,16 +144,16 @@ export default function AnswerForm() {
   return (
     <>
       <Header />
-      <main className="pt-24 min-h-screen bg-gradient-to-b from-sky-50 via-white to-gray-50 text-slate-800">
+      <main className="pt-24 min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-slate-50">
         <section className="max-w-3xl mx-auto px-6 py-12">
-          <div className="bg-white rounded-xl shadow-lg p-10 border border-slate-100">
-            <h1 className="text-2xl font-bold mb-6">Write Your Answer</h1>
+          <div className="bg-slate-900/70 rounded-xl shadow-lg p-10 border border-slate-700">
+            <h1 className="text-2xl font-bold mb-6 text-white">Write Your Answer</h1>
 
-            {error && <p className="text-red-600 mb-4 bg-red-50 p-3 rounded-md">{error}</p>}
+            {error && <p className="text-red-100 mb-4 bg-red-500/15 border border-red-400/50 p-3 rounded-md">{error}</p>}
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-6">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-slate-200 mb-2">
                   Your Answer
                 </label>
                 <textarea
@@ -161,13 +161,13 @@ export default function AnswerForm() {
                   onChange={(e) => setBody(e.target.value)}
                   rows={10}
                   placeholder="Type your answer here..."
-                  className="w-full rounded-md border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-200 text-lg resize-vertical"
+                  className="w-full rounded-md border border-slate-700 bg-slate-800 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 text-lg resize-vertical text-slate-50 placeholder:text-slate-500"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-slate-200 mb-2">
                   Attach Images
                 </label>
                 <input
@@ -175,17 +175,17 @@ export default function AnswerForm() {
                   multiple
                   accept="image/*"
                   onChange={handleFileChange}
-                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                  className="w-full text-sm text-slate-200 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border border-slate-700 file:border-slate-700 file:text-sm file:font-semibold file:bg-slate-800 file:text-indigo-200 hover:file:bg-slate-700"
                 />
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-slate-400 mt-1">
                   HEIC files are not supported. Please convert to JPEG or PNG before uploading.
                 </p>
               </div>
 
               {hasHeicFiles && (
-                <div className="bg-red-50 border border-red-200 rounded-md p-3">
-                  <p className="text-red-600 font-medium">HEIC files are not allowed!</p>
-                  <p className="text-red-500 text-sm mt-1">
+                <div className="bg-red-500/10 border border-red-400/40 rounded-md p-3">
+                  <p className="text-red-100 font-medium">HEIC files are not allowed!</p>
+                  <p className="text-red-200 text-sm mt-1">
                     Please remove all HEIC files before submitting your answer.
                   </p>
                 </div>
@@ -193,7 +193,7 @@ export default function AnswerForm() {
 
               {previews.length > 0 && (
                 <div className="mt-4">
-                  <h3 className="text-sm font-medium text-slate-700 mb-3">Image Previews:</h3>
+                  <h3 className="text-sm font-medium text-slate-200 mb-3">Image Previews:</h3>
                   <div className="flex flex-wrap gap-4">
                     {previews.map((src, index) => {
                       const isHeicFile = files[index]?.type === 'image/heic' || 
@@ -210,7 +210,7 @@ export default function AnswerForm() {
                           />
                           {isHeicFile && (
                             <div className="absolute inset-0 bg-red-500 bg-opacity-20 rounded-md flex items-center justify-center">
-                              <span className="text-red-600 font-bold text-sm bg-white bg-opacity-90 px-2 py-1 rounded">
+                              <span className="text-red-100 font-bold text-sm bg-slate-900/90 px-2 py-1 rounded">
                                 HEIC
                               </span>
                             </div>
@@ -223,7 +223,7 @@ export default function AnswerForm() {
                             ×
                           </button>
                           <div className={`text-xs mt-1 truncate max-w-32 ${
-                            isHeicFile ? 'text-red-600 font-medium' : 'text-slate-500'
+                            isHeicFile ? 'text-red-200 font-medium' : 'text-slate-400'
                           }`}>
                             {files[index]?.name}
                             {isHeicFile && ' (HEIC)'}
@@ -248,7 +248,7 @@ export default function AnswerForm() {
               </button>
 
               {hasHeicFiles && (
-                <p className="text-red-600 text-sm text-center">
+                <p className="text-red-200 text-sm text-center">
                   HEIC files are not allowed! Please remove them to submit your answer.
                 </p>
               )}

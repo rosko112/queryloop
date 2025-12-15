@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
 import Header from "@/app/components/Header";
+import AdminModerationSkeleton from "@/app/components/AdminModerationSkeleton";
 
 interface PendingQuestion {
   id: string;
@@ -117,9 +118,7 @@ export default function ModerationPage() {
     }
   };
 
-  if (checkingAdmin || loading) {
-    return <p className="pt-32 text-center text-slate-400 text-lg">Loading...</p>;
-  }
+  if (checkingAdmin || loading) return <AdminModerationSkeleton />;
 
   return (
     <>
