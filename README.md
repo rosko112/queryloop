@@ -1,48 +1,65 @@
+<div align="center">
+  <img src="./public/logo.png" alt="QueryLoop Logo" width="120" />
+</div>
+
 <h3 align="center">QueryLoop</h3>
 
 <div align="center">
 
-  [![Status](https://img.shields.io/badge/status-active-success.svg)]() 
-  [![GitHub Issues](https://img.shields.io/github/issues/kylelobo/The-Documentation-Compendium.svg)](https://github.com/kylelobo/The-Documentation-Compendium/issues)
-  [![GitHub Pull Requests](https://img.shields.io/github/issues-pr/kylelobo/The-Documentation-Compendium.svg)](https://github.com/kylelobo/The-Documentation-Compendium/pulls)
-  [![License](https://img.shields.io/badge/license-MIT-blue.svg)](/LICENSE)
+[![Status](https://img.shields.io/badge/status-active-success.svg)]()
+[![GitHub Issues](https://img.shields.io/github/issues/rosko112/QueryLoop.svg)]()
+[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/rosko112/QueryLoop.svg)]()
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](/LICENSE)
 
 </div>
 
 ---
 
 <p align="center"> 
-QueryLoop je spletna platforma za razvijalce in IT navdušence, namenjena izmenjavi znanja, reševanju tehničnih težav ter medsebojnemu učenju. Uporabniki lahko postavljajo vprašanja, odgovarjajo drugim, glasujejo za najboljše odgovore in gradijo svoj ugled v skupnosti.
-Aplikacija ponuja preprost in pregleden vmesnik z možnostjo prijave, registracije, filtriranja vprašanj ter administratorskim nadzorom nad vsebino. Cilj QueryLoop-a je ustvariti prostor, kjer lahko programerji vseh ravni hitro najdejo rešitve, delijo znanje in rastejo skupaj kot skupnost.
+QueryLoop is a modern Q&A web platform for developers and IT enthusiasts, designed for knowledge sharing, solving technical problems, and learning through community interaction. Users can ask questions, post answers, vote on the most helpful content, and build reputation within the community.
 
-    <br> 
+The application provides a clean and intuitive user interface, user authentication, question filtering, and basic administrative moderation. The goal of QueryLoop is to create a space where developers of all skill levels can quickly find solutions, share knowledge, and grow together as a community. <br>
+
 </p>
 
 ## 📝 Table of Contents
-- [About](#about)
-- [Getting Started](#getting_started)
-- [Deployment](#deployment)
-- [Usage](#usage)
-- [Built Using](#built_using)
-- [TODO](../TODO.md)
-- [Contributing](../CONTRIBUTING.md)
-- [Authors](#authors)
-- [Acknowledgments](#acknowledgement)
 
-## 🧐 About <a name = "about"></a>
-Namen projekta QueryLoop je omogočiti programerjem in IT navdušencem hitro izmenjavo znanja, reševanje programerskih težav ter spodbujati sodelovanje in učenje znotraj skupnosti razvijalcev.
+* [About](#about)
+* [Usage](#usage)
+* [Deployment](#deployment)
+* [Built Using](#built_using)
+* [Authors](#authors)
+* [Acknowledgments](#acknowledgement)
+
+## 🧐 About <a name="about"></a>
+
+QueryLoop is a community-driven Q&A platform inspired by developer knowledge-sharing websites. It focuses on simplicity, fast access to answers, and encouraging high-quality contributions through voting and reputation systems.
 
 ## 🎈 Usage <a name="usage"></a>
-Add notes about how to use the system.
 
-## 🚀 Deployment <a name = "deployment"></a>
-Add additional notes about how to deploy this on a live system.
+* User registration and authentication
+* Asking and answering questions
+* Voting on questions and answers
+* Browsing questions and tags
+* User profiles and basic admin moderation
 
-## ⛏️ Built Using <a name = "built_using"></a>
-- [MongoDB](https://www.mongodb.com/) - Database
-- [Express](https://expressjs.com/) - Server Framework
-- [VueJs](https://vuejs.org/) - Web Framework
-- [NodeJs](https://nodejs.org/en/) - Server Environment
+## 🚀 Deployment <a name="deployment"></a>
 
-## ✍️ Authors <a name = "authors"></a>
-- rosko112 (https://github.com/rosko112)- Idea & Initial work
+The application can be easily deployed using platforms such as **Vercel**, with **Supabase** providing authentication, database, and storage services.
+
+## ⛏️ Built Using <a name="built_using"></a>
+
+* [Next.js](https://nextjs.org/) – React framework
+* [Supabase](https://supabase.com/) – Authentication & Database
+* [TypeScript](https://www.typescriptlang.org/) – Type safety
+* [TailwindCSS](https://tailwindcss.com/) – Styling
+
+## ✍️ Authors <a name="authors"></a>
+
+* **rosko112** – Idea, design, and development
+  [https://github.com/rosko112](https://github.com/rosko112)
+
+## 🎉 Acknowledgements <a name="acknowledgement"></a>
+
+* Inspiration from community-driven developer platforms
+* The open-source community
