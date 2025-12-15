@@ -69,13 +69,13 @@ export default function Header() {
   return (
     <header className="fixed top-0 left-0 right-0 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 z-10 text-slate-100">
       <div className="max-w-6xl mx-auto py-4 px-6 flex items-center justify-between w-full">
-        <Link href="/" className="flex items-center space-x-3" aria-label="QueryLoop home">
-          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-sky-500 rounded-lg flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/30">
-            QL
+        <Link href="/" className="flex items-center space-x-3 group" aria-label="QueryLoop home">
+          <div className="w-11 h-11 overflow-hidden rounded-xl border border-slate-700/80 bg-slate-800/80 shadow-lg shadow-indigo-500/20 flex items-center justify-center group-hover:border-indigo-400/60 transition">
+            <img src="/logo.png" alt="QueryLoop logo" className="w-8 h-8 object-contain drop-shadow-[0_2px_6px_rgba(99,102,241,0.4)]" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold text-white">QueryLoop</h1>
-            <p className="text-sm text-slate-400 -mt-1">Ask. Answer. Iterate.</p>
+            <h1 className="text-2xl font-semibold text-white leading-tight">QueryLoop</h1>
+            <p className="text-xs text-slate-400 tracking-wide uppercase">Ask. Answer. Iterate.</p>
           </div>
         </Link>
 
@@ -121,4 +121,3 @@ export default function Header() {
     </header>
   );
 }
-
