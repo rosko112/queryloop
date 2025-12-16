@@ -20,6 +20,7 @@ export default function RegisterPage() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -47,6 +48,7 @@ export default function RegisterPage() {
     passwordsMatch &&
     formData.acceptTerms &&
     !loading;
+  const formSubmitDisabled = !canSubmit || oauthLoading || loading;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -109,6 +111,23 @@ export default function RegisterPage() {
     }
   };
 
+  const handleGoogleSignup = async () => {
+    setError(null);
+    setSuccess(null);
+    setOauthLoading(true);
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (oauthError) {
+      setError(oauthError.message);
+      setOauthLoading(false);
+    }
+  };
+
   return (
     <>
       <Header />
@@ -117,6 +136,31 @@ export default function RegisterPage() {
         <p className="text-2xl font-semibold mb-6 text-center text-white">Create your account</p>
           {error && <div className="text-sm text-rose-100 bg-rose-500/10 border border-rose-400/40 rounded-md p-3">{error}</div>}
           {success && <div className="text-sm text-green-100 bg-green-500/10 border border-green-400/40 rounded-md p-3">{success}</div>}
+
+          <div className="space-y-3 mb-6">
+            <button
+              type="button"
+              onClick={handleGoogleSignup}
+              disabled={oauthLoading || loading}
+              className={`w-full flex items-center justify-center gap-2 rounded-md border border-slate-700 bg-white text-slate-900 px-4 py-2 font-medium transition hover:bg-slate-50 ${
+                oauthLoading || loading ? "opacity-70 cursor-not-allowed" : ""
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="w-5 h-5">
+                <path fill="#EA4335" d="M24 9.5c3.15 0 5.97 1.1 8.2 3.24l6.15-6.15C34.9 2.6 29.85.5 24 .5 14.8.5 6.7 5.95 2.7 13.35l7.2 5.6C11.8 13.05 17.4 9.5 24 9.5z" />
+                <path fill="#4285F4" d="M46.5 24c0-1.57-.14-3.08-.4-4.55H24v9.1h12.6c-.55 3-2.17 5.54-4.63 7.24l7.2 5.6C43.8 37.4 46.5 31.1 46.5 24z" />
+                <path fill="#FBBC05" d="M9.9 28.05A14.5 14.5 0 0 1 9 24c0-1.4.23-2.76.63-4.05l-7.2-5.6A23.44 23.44 0 0 0 .5 24c0 3.8.9 7.4 2.46 10.55l7.2-6.5z" />
+                <path fill="#34A853" d="M24 47.5c6.5 0 12-2.14 16-5.85l-7.2-5.6c-2 1.35-4.6 2.15-8.8 2.15-6.6 0-12.2-3.55-14.1-8.75l-7.2 5.6C6.7 42.05 14.8 47.5 24 47.5z" />
+                <path fill="none" d="M0 0h48v48H0z" />
+              </svg>
+              {oauthLoading ? "Redirecting to Google..." : "Continue with Google"}
+            </button>
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              <span className="h-px flex-1 bg-slate-700" />
+              <span>or</span>
+              <span className="h-px flex-1 bg-slate-700" />
+            </div>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <label className="block">
@@ -216,14 +260,12 @@ export default function RegisterPage() {
             </label>
             <button
               type="submit"
-              disabled={!canSubmit}
+              disabled={formSubmitDisabled}
               className={`w-full px-4 py-2 rounded-md text-white font-medium shadow-sm transition ${
-                canSubmit
-                  ? "bg-indigo-600 hover:bg-indigo-700"
-                  : "bg-indigo-300 cursor-not-allowed"
+                formSubmitDisabled ? "bg-indigo-300 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"
               }`}
             >
-              {loading ? "Creating account…" : "Create Account"}
+              {loading ? "Creating account..." : "Create Account"}
             </button>
             <p className="mt-6 text-center text-sm text-slate-400">
             Already got an account?{" "}
