@@ -85,6 +85,7 @@ export default function QuestionPage() {
   const [answerLoading, setAnswerLoading] = useState(false);
   const [answerError, setAnswerError] = useState<string | null>(null);
   const [adminDeleting, setAdminDeleting] = useState(false);
+  const [ownerDeleting, setOwnerDeleting] = useState(false);
 
   const getImageUrl = (filePath: string) =>
     `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/questions-files/${filePath}`;
@@ -500,6 +501,46 @@ export default function QuestionPage() {
     }
   };
 
+  const deleteQuestionCascade = async () => {
+    if (!questionId) return;
+
+    // Delete question attachments from storage + db
+    const { data: qAtt } = await supabase
+      .from("question_attachments")
+      .select("file_path")
+      .eq("question_id", questionId);
+    if (qAtt && qAtt.length > 0) {
+      await supabase.storage.from("questions-files").remove(qAtt.map(a => a.file_path));
+      await supabase.from("question_attachments").delete().eq("question_id", questionId);
+    }
+
+    // Delete answers and their attachments
+    const { data: answersData } = await supabase
+      .from("answers")
+      .select("id")
+      .eq("question_id", questionId);
+    const answerIds = answersData?.map(a => a.id) || [];
+    if (answerIds.length > 0) {
+      const { data: aAtt } = await supabase
+        .from("answer_attachments")
+        .select("file_path")
+        .in("answer_id", answerIds);
+      if (aAtt && aAtt.length > 0) {
+        await supabase.storage.from("answer-files").remove(aAtt.map(a => a.file_path));
+        await supabase.from("answer_attachments").delete().in("answer_id", answerIds);
+      }
+      await supabase.from("answers").delete().in("id", answerIds);
+    }
+
+    await supabase.from("favorites").delete().eq("question_id", questionId);
+    await supabase.from("questions_tags").delete().eq("question_id", questionId);
+    await supabase.from("votes").delete().eq("target_type", "question").eq("target_id", questionId);
+    if (answerIds.length > 0) {
+      await supabase.from("votes").delete().eq("target_type", "answer").in("target_id", answerIds);
+    }
+    await supabase.from("questions").delete().eq("id", questionId);
+  };
+
   const handleAdminDeleteQuestion = async () => {
     if (!currentUserIsAdmin || !questionId) return;
     const confirmed = window.confirm("Delete this question and related content? This cannot be undone.");
@@ -507,45 +548,27 @@ export default function QuestionPage() {
 
     setAdminDeleting(true);
     try {
-      // Delete question attachments from storage + db
-      const { data: qAtt } = await supabase
-        .from("question_attachments")
-        .select("file_path")
-        .eq("question_id", questionId);
-      if (qAtt && qAtt.length > 0) {
-        await supabase.storage.from("questions-files").remove(qAtt.map(a => a.file_path));
-        await supabase.from("question_attachments").delete().eq("question_id", questionId);
-      }
-
-      // Delete answers and their attachments
-      const { data: answersData } = await supabase
-        .from("answers")
-        .select("id")
-        .eq("question_id", questionId);
-      const answerIds = answersData?.map(a => a.id) || [];
-      if (answerIds.length > 0) {
-        const { data: aAtt } = await supabase
-          .from("answer_attachments")
-          .select("file_path")
-          .in("answer_id", answerIds);
-        if (aAtt && aAtt.length > 0) {
-          await supabase.storage.from("answer-files").remove(aAtt.map(a => a.file_path));
-          await supabase.from("answer_attachments").delete().in("answer_id", answerIds);
-        }
-        await supabase.from("answers").delete().in("id", answerIds);
-      }
-
-      await supabase.from("favorites").delete().eq("question_id", questionId);
-      await supabase.from("questions_tags").delete().eq("question_id", questionId);
-      await supabase.from("votes").delete().eq("target_type", "question").eq("target_id", questionId);
-      if (answerIds.length > 0) {
-        await supabase.from("votes").delete().eq("target_type", "answer").in("target_id", answerIds);
-      }
-      await supabase.from("questions").delete().eq("id", questionId);
-
+      await deleteQuestionCascade();
       router.push("/question");
     } finally {
       setAdminDeleting(false);
+    }
+  };
+
+  const handleOwnerDeleteQuestion = async () => {
+    if (!questionId || !question || question.author_id !== currentUserId) return;
+    const confirmed = window.confirm("Delete your question and all its answers? This cannot be undone.");
+    if (!confirmed) return;
+
+    setOwnerDeleting(true);
+    try {
+      await deleteQuestionCascade();
+      router.push("/question");
+    } catch (err) {
+      console.error(err);
+      alert("Could not delete your question. Please try again.");
+    } finally {
+      setOwnerDeleting(false);
     }
   };
 
@@ -601,13 +624,13 @@ export default function QuestionPage() {
                   <span aria-hidden="true">{isFavorite ? "★" : "☆"}</span>
                   <span>{favoriteCount}</span>
                 </button>
-                {currentUserIsAdmin && (
+                {(currentUserIsAdmin || question.author_id === currentUserId) && (
                   <button
-                    onClick={handleAdminDeleteQuestion}
-                    disabled={adminDeleting}
+                    onClick={currentUserIsAdmin ? handleAdminDeleteQuestion : handleOwnerDeleteQuestion}
+                    disabled={adminDeleting || ownerDeleting}
                     className="ml-2 px-3 py-2 rounded-md text-sm bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
                   >
-                    {adminDeleting ? "Deleting..." : "Delete"}
+                    {adminDeleting || ownerDeleting ? "Deleting..." : "Delete"}
                   </button>
                 )}
               </div>
