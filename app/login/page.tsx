@@ -18,6 +18,11 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const getRedirectUrl = () => {
+    const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://queryloop.eu";
+    return `${base}/auth/callback`;
+  };
+
   useEffect(() => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -86,7 +91,7 @@ export default function LoginPage() {
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: getRedirectUrl(),
       },
     });
 
