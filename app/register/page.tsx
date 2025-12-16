@@ -25,7 +25,9 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   const getRedirectUrl = () => {
-    const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://queryloop.eu";
+    const base =
+      process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
+      "https://www.queryloop.eu";
     return `${base}/auth/callback`;
   };
 
