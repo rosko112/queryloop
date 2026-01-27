@@ -167,27 +167,47 @@ function AllQuestionsPageContent() {
           </div>
 
           <div className="flex flex-wrap gap-4 mb-6">
-            <input
-              type="text"
-              placeholder="Search by title..."
-              value={searchTitle}
-              onChange={e => {
-                const value = e.target.value;
-                setSearchTitle(value);
-                setPage(1);
+            <div className="relative w-full md:w-1/3">
+              <input
+                type="text"
+                placeholder="Search by title..."
+                value={searchTitle}
+                onChange={e => {
+                  const value = e.target.value;
+                  setSearchTitle(value);
+                  setPage(1);
 
-                const params = new URLSearchParams(searchParams.toString());
-                if (value) {
-                  params.set("title", value);
-                } else {
-                  params.delete("title");
-                }
-                if (filterTag) params.set("tag", filterTag);
-                const query = params.toString();
-                router.replace(`/question${query ? `?${query}` : ""}`);
-              }}
-              className="px-4 py-2 w-full md:w-1/3 rounded-md border border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            />
+                  const params = new URLSearchParams(searchParams.toString());
+                  if (value) {
+                    params.set("title", value);
+                  } else {
+                    params.delete("title");
+                  }
+                  if (filterTag) params.set("tag", filterTag);
+                  const query = params.toString();
+                  router.replace(`/question${query ? `?${query}` : ""}`);
+                }}
+                className="px-4 py-2 w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              />
+              {searchTitle && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchTitle("");
+                    setPage(1);
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.delete("title");
+                    if (filterTag) params.set("tag", filterTag);
+                    const query = params.toString();
+                    router.replace(`/question${query ? `?${query}` : ""}`);
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition"
+                  aria-label="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
 
             <select
               value={filterTag}
