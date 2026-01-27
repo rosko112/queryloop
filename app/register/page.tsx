@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
@@ -8,7 +8,7 @@ import Header from "@/app/components/Header";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const supabase = createClientComponentClient();
+  const supabase = useMemo(() => createClientComponentClient(), []);
 
   const [formData, setFormData] = useState({
     username: "",
@@ -111,8 +111,9 @@ export default function RegisterPage() {
       setTimeout(() => {
         router.push("/");
       }, 700);
-    } catch (err: any) {
-      setError(err?.message || "Network error");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Network error";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -140,7 +141,7 @@ export default function RegisterPage() {
       <Header />
       <main className="min-h-screen flex flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 pt-24 p-6 text-slate-50">
         <div className="w-full max-w-md mx-auto bg-slate-900/70 backdrop-blur-sm border border-slate-700 rounded-xl shadow-lg p-8">
-        <p className="text-2xl font-semibold mb-6 text-center text-white">Create your account</p>
+          <p className="text-2xl font-semibold mb-6 text-center text-white">Create your account</p>
           {error && <div className="text-sm text-rose-100 bg-rose-500/10 border border-rose-400/40 rounded-md p-3">{error}</div>}
           {success && <div className="text-sm text-green-100 bg-green-500/10 border border-green-400/40 rounded-md p-3">{success}</div>}
 
@@ -275,11 +276,11 @@ export default function RegisterPage() {
               {loading ? "Creating account..." : "Create Account"}
             </button>
             <p className="mt-6 text-center text-sm text-slate-400">
-            Already got an account?{" "}
-            <Link href="/login" className="text-indigo-200 hover:underline">
-              Log in
-            </Link>
-          </p>
+              Already got an account?{" "}
+              <Link href="/login" className="text-indigo-200 hover:underline">
+                Log in
+              </Link>
+            </p>
           </form>
         </div>
       </main>

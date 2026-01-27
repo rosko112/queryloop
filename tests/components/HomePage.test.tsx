@@ -3,7 +3,11 @@ import HomePage from '@/app/page';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
 
-jest.mock('@/app/components/Header', () => () => <div data-testid="header" />);
+jest.mock('@/app/components/Header', () => {
+  const HeaderMock = () => <div data-testid="header" />;
+  HeaderMock.displayName = 'Header';
+  return { __esModule: true, default: HeaderMock };
+});
 
 jest.mock('@supabase/auth-helpers-nextjs', () => ({
   createClientComponentClient: jest.fn(),
@@ -42,7 +46,8 @@ describe('HomePage', () => {
     ];
     const tags = [{ id: 't1', name: 'testing' }];
 
-    const responseByTable: Record<string, { data: any[]; error: null }> = {
+    type SupabaseResponse<T> = { data: T[]; error: null };
+    const responseByTable: Record<string, SupabaseResponse<unknown>> = {
       questions: { data: questions, error: null },
       users: { data: users, error: null },
       questions_tags: { data: questionsTags, error: null },
@@ -52,14 +57,23 @@ describe('HomePage', () => {
 
     const buildQuery = (table: string) => {
       const response = responseByTable[table] ?? { data: [], error: null };
-      const chain: any = {
+      type QueryChain = {
+        select: jest.Mock;
+        eq: jest.Mock;
+        order: jest.Mock;
+        limit: jest.Mock;
+        in: jest.Mock;
+        then?: (resolve: (value: SupabaseResponse<unknown>) => void) => void;
+      };
+      const chain: QueryChain = {
         select: jest.fn(() => chain),
         eq: jest.fn(() => chain),
         order: jest.fn(() => chain),
         limit: jest.fn(async () => response),
         in: jest.fn(async () => response),
       };
-      chain.then = (resolve: (value: any) => void) => Promise.resolve(response).then(resolve);
+      chain.then = (resolve: (value: SupabaseResponse<unknown>) => void) =>
+        Promise.resolve(response).then(resolve);
       return chain;
     };
 

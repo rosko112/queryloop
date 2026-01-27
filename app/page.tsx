@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import Header from "@/app/components/Header";
@@ -22,7 +22,7 @@ interface Tag {
 }
 
 export default function HomePage() {
-  const supabase = createClientComponentClient();
+  const supabase = useMemo(() => createClientComponentClient(), []);
   const router = useRouter();
 
   const [questions, setQuestions] = useState<(Question & { username?: string; tags?: Tag[] })[]>([]);
@@ -41,91 +41,97 @@ export default function HomePage() {
     }
   };
 
-  useEffect(() => {
-    const fetchAuth = async () => {
-      const { data } = await supabase.auth.getUser();
-      setIsLoggedIn(!!data.user);
-    };
-    fetchAuth();
+  const fetchAuth = useCallback(async () => {
+    const { data } = await supabase.auth.getUser();
+    setIsLoggedIn(!!data.user);
+  }, [supabase]);
 
-    const fetchTopQuestions = async () => {
-      setLoading(true);
-      try {
-        const { data: questionsData, error: qError } = await supabase
-          .from("questions")
-          .select("*")
-          .eq("is_public", true)
-          .order("created_at", { ascending: false })
-          .limit(3);
+  const fetchTopQuestions = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data: questionsData, error: qError } = await supabase
+        .from("questions")
+        .select("*")
+        .eq("is_public", true)
+        .order("created_at", { ascending: false })
+        .limit(3);
 
-        if (qError || !questionsData) throw qError;
+      if (qError || !questionsData) throw qError;
 
-        const { data: usersData } = await supabase.from("users").select("id, username");
-        const usersMap: Record<string, string> = {};
-        usersData?.forEach(u => { usersMap[u.id] = u.username; });
+      const { data: usersData } = await supabase.from("users").select("id, username");
+      const usersMap: Record<string, string> = {};
+      usersData?.forEach(u => {
+        usersMap[u.id] = u.username;
+      });
 
-        const questionIds = questionsData.map(q => q.id);
-        const { data: tagsData } = await supabase
-          .from("questions_tags")
-          .select("question_id, tags(id, name)")
-          .in("question_id", questionIds);
+      const questionIds = questionsData.map(q => q.id);
+      const { data: tagsData } = await supabase
+        .from("questions_tags")
+        .select("question_id, tags(id, name)")
+        .in("question_id", questionIds);
 
-        const tagsMap: Record<string, Tag[]> = {};
-        tagsData?.forEach((qt: any) => {
-          if (!tagsMap[qt.question_id]) tagsMap[qt.question_id] = [];
-          tagsMap[qt.question_id].push(qt.tags);
+      const tagsMap: Record<string, Tag[]> = {};
+      const questionTags = (tagsData ?? []) as { question_id: string; tags: Tag | null }[];
+      questionTags.forEach(qt => {
+        if (!qt.tags) return;
+        if (!tagsMap[qt.question_id]) tagsMap[qt.question_id] = [];
+        tagsMap[qt.question_id].push(qt.tags);
+      });
+
+      // Votes counts
+      const voteUpMap: Record<string, number> = {};
+      const voteDownMap: Record<string, number> = {};
+      if (questionIds.length > 0) {
+        const { data: voteRows } = await supabase
+          .from("votes")
+          .select("target_id, value")
+          .eq("target_type", "question")
+          .in("target_id", questionIds);
+        voteRows?.forEach(v => {
+          if (v.value === 1) voteUpMap[v.target_id] = (voteUpMap[v.target_id] || 0) + 1;
+          if (v.value === -1) voteDownMap[v.target_id] = (voteDownMap[v.target_id] || 0) + 1;
         });
-
-        // Votes counts
-        const voteUpMap: Record<string, number> = {};
-        const voteDownMap: Record<string, number> = {};
-        if (questionIds.length > 0) {
-          const { data: voteRows } = await supabase
-            .from("votes")
-            .select("target_id, value")
-            .eq("target_type", "question")
-            .in("target_id", questionIds);
-          voteRows?.forEach(v => {
-            if (v.value === 1) voteUpMap[v.target_id] = (voteUpMap[v.target_id] || 0) + 1;
-            if (v.value === -1) voteDownMap[v.target_id] = (voteDownMap[v.target_id] || 0) + 1;
-          });
-        }
-
-        const questionsWithDetails = questionsData.map(q => ({
-          ...q,
-          username: usersMap[q.author_id] || "Unknown",
-          tags: tagsMap[q.id] || [],
-          votes_up: voteUpMap[q.id] || 0,
-          votes_down: voteDownMap[q.id] || 0,
-        }));
-
-        setQuestions(questionsWithDetails);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
       }
-    };
 
-    fetchTopQuestions();
-  }, []);
+      const questionsWithDetails = questionsData.map(q => ({
+        ...q,
+        username: usersMap[q.author_id] || "Unknown",
+        tags: tagsMap[q.id] || [],
+        votes_up: voteUpMap[q.id] || 0,
+        votes_down: voteDownMap[q.id] || 0,
+      }));
+
+      setQuestions(questionsWithDetails);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to load questions.";
+      console.error(message);
+    } finally {
+      setLoading(false);
+    }
+  }, [supabase]);
+
+  const fetchTags = useCallback(async () => {
+    setTagLoading(true);
+    try {
+      const { data } = await supabase
+        .from("tags")
+        .select("id, name")
+        .order("name")
+        .limit(9);
+      setFeaturedTags(data || []);
+    } finally {
+      setTagLoading(false);
+    }
+  }, [supabase]);
 
   useEffect(() => {
-    const fetchTags = async () => {
-      setTagLoading(true);
-      try {
-        const { data } = await supabase
-          .from("tags")
-          .select("id, name")
-          .order("name")
-          .limit(9);
-        setFeaturedTags(data || []);
-      } finally {
-        setTagLoading(false);
-      }
-    };
-    fetchTags();
-  }, []);
+    void fetchAuth();
+    void fetchTopQuestions();
+  }, [fetchAuth, fetchTopQuestions]);
+
+  useEffect(() => {
+    void fetchTags();
+  }, [fetchTags]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

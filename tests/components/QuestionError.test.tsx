@@ -3,7 +3,11 @@ import userEvent from '@testing-library/user-event';
 import QuestionError from '@/app/components/QuestionError';
 import { useRouter } from 'next/navigation';
 
-jest.mock('@/app/components/Header', () => () => <div data-testid="header" />);
+jest.mock('@/app/components/Header', () => {
+  const HeaderMock = () => <div data-testid="header" />;
+  HeaderMock.displayName = 'Header';
+  return { __esModule: true, default: HeaderMock };
+});
 
 jest.mock('next/navigation', () => ({
   useRouter: jest.fn(),

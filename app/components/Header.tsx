@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 interface User {
   id: string;
@@ -14,8 +14,7 @@ interface User {
 }
 
 export default function Header() {
-  const router = useRouter();
-  const supabase = createClientComponentClient();
+  const supabase = useMemo(() => createClientComponentClient(), []);
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -60,18 +59,19 @@ export default function Header() {
     return () => listener.subscription.unsubscribe();
   }, [supabase]);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    router.push("/login");
-  };
-
   return (
     <header className="fixed top-0 left-0 right-0 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 z-10 text-slate-100">
       <div className="max-w-6xl mx-auto py-4 px-6 flex items-center justify-between w-full">
         <Link href="/" className="flex items-center space-x-3 group" aria-label="QueryLoop home">
           <div className="w-11 h-11 overflow-hidden rounded-xl border border-slate-700/80 bg-slate-800/80 shadow-lg shadow-indigo-500/20 flex items-center justify-center group-hover:border-indigo-400/60 transition">
-            <img src="/logo.png" alt="QueryLoop logo" className="w-8 h-8 object-contain drop-shadow-[0_2px_6px_rgba(99,102,241,0.4)]" />
+            <Image
+              src="/logo.png"
+              alt="QueryLoop logo"
+              width={32}
+              height={32}
+              className="w-8 h-8 object-contain drop-shadow-[0_2px_6px_rgba(99,102,241,0.4)]"
+              priority
+            />
           </div>
           <div>
             <h1 className="text-2xl font-semibold text-white leading-tight">QueryLoop</h1>

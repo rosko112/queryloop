@@ -6,6 +6,25 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+interface ModerationBody {
+  action?: "approve" | "reject";
+  questionId?: string;
+}
+
+interface AuthorRow {
+  id: string;
+  username: string;
+  display_name: string | null;
+}
+
+interface AttachmentRow {
+  file_path: string;
+}
+
+interface AnswerRow {
+  id: string;
+}
+
 export async function GET() {
   try {
     const { data: questions, error: qError } = await supabaseAdmin
@@ -27,8 +46,8 @@ export async function GET() {
 
       if (authorError) return NextResponse.json({ error: authorError.message }, { status: 400 });
 
-      authorRows?.forEach(a => {
-        authors[a.id] = { username: a.username, display_name: (a as any).display_name };
+      (authorRows as AuthorRow[] | null)?.forEach(a => {
+        authors[a.id] = { username: a.username, display_name: a.display_name ?? undefined };
       });
     }
 
@@ -38,14 +57,15 @@ export async function GET() {
     }));
 
     return NextResponse.json({ data });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Server error.";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { action, questionId } = await req.json();
+    const { action, questionId } = (await req.json()) as ModerationBody;
 
     if (!action || !questionId) {
       return NextResponse.json({ error: "Missing action or questionId" }, { status: 400 });
@@ -68,10 +88,11 @@ export async function POST(req: NextRequest) {
         .eq("question_id", questionId);
       if (qAttError) return NextResponse.json({ error: qAttError.message }, { status: 400 });
 
-      if (qAttachments && qAttachments.length > 0) {
+      const qAttachmentRows = (qAttachments ?? []) as AttachmentRow[];
+      if (qAttachmentRows.length > 0) {
         const { error: storageError } = await supabaseAdmin.storage
           .from("questions-files")
-          .remove(qAttachments.map(att => att.file_path));
+          .remove(qAttachmentRows.map(att => att.file_path));
         if (storageError) return NextResponse.json({ error: storageError.message }, { status: 400 });
 
         const { error: deleteAttachmentsError } = await supabaseAdmin
@@ -89,7 +110,7 @@ export async function POST(req: NextRequest) {
         .eq("question_id", questionId);
       if (answersError) return NextResponse.json({ error: answersError.message }, { status: 400 });
 
-      const answerIds = answers?.map(a => a.id) || [];
+      const answerIds = (answers as AnswerRow[] | null)?.map(a => a.id) || [];
       if (answerIds.length > 0) {
         const { data: answerAttachments, error: answerAttError } = await supabaseAdmin
           .from("answer_attachments")
@@ -97,10 +118,11 @@ export async function POST(req: NextRequest) {
           .in("answer_id", answerIds);
         if (answerAttError) return NextResponse.json({ error: answerAttError.message }, { status: 400 });
 
-        if (answerAttachments && answerAttachments.length > 0) {
+        const answerAttachmentRows = (answerAttachments ?? []) as AttachmentRow[];
+        if (answerAttachmentRows.length > 0) {
           const { error: answerStorageError } = await supabaseAdmin.storage
             .from("answer-files")
-            .remove(answerAttachments.map(att => att.file_path));
+            .remove(answerAttachmentRows.map(att => att.file_path));
           if (answerStorageError) {
             return NextResponse.json({ error: answerStorageError.message }, { status: 400 });
           }
@@ -134,7 +156,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Server error.";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

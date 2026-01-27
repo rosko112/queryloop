@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
 import Header from "@/app/components/Header";
+import Image from "next/image";
 
 export default function AskQuestionForm() {
-  const supabase = createClientComponentClient();
+  const supabase = useMemo(() => createClientComponentClient(), []);
   const router = useRouter();
 
   const [title, setTitle] = useState("");
@@ -157,8 +158,9 @@ export default function AskQuestionForm() {
       }
 
       router.push(`/question/${questionId}?pending=1`);
-    } catch (err: any) {
-      setError(err.message || "Failed to post question.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to post question.";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -300,9 +302,12 @@ export default function AskQuestionForm() {
 
                         return (
                           <div key={index} className="relative group">
-                            <img
+                            <Image
                               src={src}
                               alt={`preview-${index}`}
+                              width={128}
+                              height={128}
+                              unoptimized
                               className={`w-32 h-32 object-cover rounded-md border shadow-sm ${
                                 isHeicFile ? "opacity-50 border-2 border-red-500" : ""
                               }`}

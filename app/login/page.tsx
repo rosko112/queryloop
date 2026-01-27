@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
@@ -8,7 +8,7 @@ import Header from "@/app/components/Header";
 
 export default function LoginPage() {
   const router = useRouter();
-  const supabase = createClientComponentClient();
+  const supabase = useMemo(() => createClientComponentClient(), []);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -64,7 +64,7 @@ export default function LoginPage() {
 
       const userId = authData.user.id;
 
-      const { data: profile, error: profileError } = await supabase
+      const { error: profileError } = await supabase
         .from("users")
         .select("*")
         .eq("id", userId)
@@ -79,8 +79,9 @@ export default function LoginPage() {
       setTimeout(() => {
         router.push("/");
       }, 500);
-    } catch (err: any) {
-      setError(err?.message || "Network error");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Network error";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -183,7 +184,7 @@ export default function LoginPage() {
           </form>
 
           <p className="mt-6 text-center text-sm text-slate-400">
-            Don't have an account?{" "}
+            Don{"'"}t have an account?{" "}
             <Link href="/register" className="text-indigo-200 hover:underline">
               Create one
             </Link>

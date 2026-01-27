@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
 import Header from "@/app/components/Header";
@@ -13,7 +13,7 @@ interface UserProfile {
 }
 
 export default function EditProfilePage() {
-  const supabase = createClientComponentClient();
+  const supabase = useMemo(() => createClientComponentClient(), []);
   const router = useRouter();
 
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -23,28 +23,30 @@ export default function EditProfilePage() {
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
 
+  const fetchProfile = useCallback(async () => {
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return router.push("/login");
+
+    const { data } = await supabase
+      .from("users")
+      .select("id, display_name, bio")
+      .eq("id", auth.user.id)
+      .single();
+
+    if (data) {
+      setUser(data);
+      setDisplayName(data.display_name ?? "");
+      setBio(data.bio ?? "");
+    }
+
+    setLoading(false);
+  }, [router, supabase]);
+
   useEffect(() => {
-    const fetchProfile = async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) return router.push("/login");
-
-      const { data } = await supabase
-        .from("users")
-        .select("id, display_name, bio")
-        .eq("id", auth.user.id)
-        .single();
-
-      if (data) {
-        setUser(data);
-        setDisplayName(data.display_name ?? "");
-        setBio(data.bio ?? "");
-      }
-
-      setLoading(false);
-    };
-
-    fetchProfile();
-  }, []);
+    queueMicrotask(() => {
+      void fetchProfile();
+    });
+  }, [fetchProfile]);
 
   const handleSave = async () => {
     if (!user) return;

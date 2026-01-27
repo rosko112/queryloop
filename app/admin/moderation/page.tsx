@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
 import Header from "@/app/components/Header";
@@ -15,7 +15,7 @@ interface PendingQuestion {
 }
 
 export default function ModerationPage() {
-  const supabase = createClientComponentClient();
+  const supabase = useMemo(() => createClientComponentClient(), []);
   const router = useRouter();
 
   const [pending, setPending] = useState<PendingQuestion[]>([]);
@@ -25,28 +25,49 @@ export default function ModerationPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const checkAdmin = async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) return router.push("/login");
+    let cancelled = false;
 
-      const { data: currentUser } = await supabase
+    const checkAdmin = async () => {
+      const { data: auth, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        if (!cancelled) setError(authError.message);
+        return;
+      }
+
+      if (!auth.user) {
+        router.push("/login");
+        return;
+      }
+
+      const { data: currentUser, error: userError } = await supabase
         .from("users")
         .select("is_admin")
         .eq("id", auth.user.id)
         .single();
 
-      if (!currentUser?.is_admin) {
-        alert("You are not authorized to access this page.");
-        return router.push("/");
+      if (userError) {
+        if (!cancelled) setError(userError.message);
+        return;
       }
 
-      setCheckingAdmin(false);
+      if (!currentUser?.is_admin) {
+        alert("You are not authorized to access this page.");
+        router.push("/");
+        return;
+      }
+
+      if (!cancelled) setCheckingAdmin(false);
     };
 
-    checkAdmin();
-  }, []);
+    void checkAdmin();
 
-  const fetchPending = async () => {
+    return () => {
+      cancelled = true;
+    };
+  }, [router, supabase]);
+
+
+  const fetchPending = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -59,17 +80,22 @@ export default function ModerationPage() {
       }
 
       setPending(payload.data || []);
-    } catch (err: any) {
-      setError(err.message || "Failed to load pending questions.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to load pending questions.";
+      setError(message);
       setPending([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    if (!checkingAdmin) fetchPending();
-  }, [checkingAdmin]);
+    if (!checkingAdmin) {
+      queueMicrotask(() => {
+        void fetchPending();
+      });
+    }
+  }, [checkingAdmin, fetchPending]);
 
   const approve = async (questionId: string) => {
     setActioning(questionId);
@@ -87,8 +113,9 @@ export default function ModerationPage() {
       }
 
       setPending(prev => prev.filter(q => q.id !== questionId));
-    } catch (err: any) {
-      setError(err.message || "Failed to approve question.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to approve question.";
+      setError(message);
     } finally {
       setActioning(null);
     }
@@ -111,8 +138,9 @@ export default function ModerationPage() {
       }
 
       setPending(prev => prev.filter(q => q.id !== questionId));
-    } catch (err: any) {
-      setError(err.message || "Failed to remove question.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to remove question.";
+      setError(message);
     } finally {
       setActioning(null);
     }

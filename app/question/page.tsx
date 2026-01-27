@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import Header from "@/app/components/Header";
 import Link from "next/link";
@@ -16,18 +16,13 @@ interface Question {
   votes_score?: number;
 }
 
-interface User {
-  id: string;
-  username: string;
-}
-
 interface Tag {
   id: string;
   name: string;
 }
 
 function AllQuestionsPageContent() {
-  const supabase = createClientComponentClient();
+  const supabase = useMemo(() => createClientComponentClient(), []);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -38,7 +33,6 @@ function AllQuestionsPageContent() {
   const [searchTitle, setSearchTitle] = useState(searchParams.get("title") || "");
   const [filterTag, setFilterTag] = useState<string>(searchParams.get("tag") || "");
   const [sortByDate, setSortByDate] = useState<"asc" | "desc">("desc");
-  const [voteScores, setVoteScores] = useState<Record<string, number>>({});
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const pageSize = 10;
@@ -120,7 +114,7 @@ function AllQuestionsPageContent() {
           .select("question_id, tag_id (id, name)")
           .in("question_id", questionIds);
 
-        let scoreMap: Record<string, number> = {};
+        const scoreMap: Record<string, number> = {};
         if (questionIds.length > 0) {
           const { data: voteRows } = await supabase
             .from("votes")
@@ -131,7 +125,6 @@ function AllQuestionsPageContent() {
             scoreMap[v.target_id] = (scoreMap[v.target_id] || 0) + (v.value || 0);
           });
         }
-        setVoteScores(scoreMap);
 
         const questionsWithTags = questionsData.map(q => ({
           ...q,
