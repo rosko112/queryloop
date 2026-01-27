@@ -57,10 +57,10 @@ export default function TagsPage() {
               <p className="text-slate-300 text-sm mt-1">Discover topics and jump straight to the conversations.</p>
             </div>
             <Link
-              href="/question"
+              href="/"
               className="text-sm px-4 py-2 rounded-md bg-indigo-500 text-white border border-indigo-400/60 hover:bg-indigo-600 transition"
             >
-              Back to questions
+              Back to main page
             </Link>
           </div>
 

@@ -584,6 +584,14 @@ export default function QuestionPage() {
       <Header />
       <main className="pt-24 min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-slate-50">
         <section className="max-w-5xl mx-auto px-6 py-12">
+          <div className="flex justify-end mb-6">
+            <Link
+              href="/question"
+              className="text-sm px-4 py-2 rounded-md bg-indigo-500 text-white border border-indigo-400/60 hover:bg-indigo-600 transition"
+            >
+              Back to questions
+            </Link>
+          </div>
           <div className="bg-slate-800/70 rounded-xl shadow-lg p-10 border border-slate-700">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <h1 className="text-3xl font-bold text-white">{question.title}</h1>
