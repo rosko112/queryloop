@@ -70,13 +70,20 @@ export default function HomePage() {
         .select("question_id, tags(id, name)")
         .in("question_id", questionIds);
 
+      type QuestionTagRow = {
+  question_id: string;
+  tags: Tag[] | null;
+};
+
       const tagsMap: Record<string, Tag[]> = {};
-      const questionTags = (tagsData ?? []) as { question_id: string; tags: Tag | null }[];
-      questionTags.forEach(qt => {
-        if (!qt.tags) return;
-        if (!tagsMap[qt.question_id]) tagsMap[qt.question_id] = [];
-        tagsMap[qt.question_id].push(qt.tags);
+
+      const questionTags = (tagsData ?? []) as unknown as QuestionTagRow[];
+
+      questionTags.forEach((qt) => {
+        const tagsArr = qt.tags ?? [];
+        (tagsMap[qt.question_id] ||= []).push(...tagsArr);
       });
+
 
       // Votes counts
       const voteUpMap: Record<string, number> = {};
