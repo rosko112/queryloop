@@ -71,17 +71,17 @@ export default function HomePage() {
         .in("question_id", questionIds);
 
       type QuestionTagRow = {
-  question_id: string;
-  tags: Tag[] | null;
-};
+        question_id: string;
+        tags: Tag | Tag[] | null;
+      };
 
       const tagsMap: Record<string, Tag[]> = {};
+      const questionTags = (tagsData ?? []) as QuestionTagRow[];
 
-      const questionTags = (tagsData ?? []) as unknown as QuestionTagRow[];
-
-      questionTags.forEach((qt) => {
-        const tagsArr = qt.tags ?? [];
-        (tagsMap[qt.question_id] ||= []).push(...tagsArr);
+      questionTags.forEach(qt => {
+        if (!qt.tags) return;
+        const normalized = Array.isArray(qt.tags) ? qt.tags : [qt.tags];
+        (tagsMap[qt.question_id] ||= []).push(...normalized);
       });
 
 

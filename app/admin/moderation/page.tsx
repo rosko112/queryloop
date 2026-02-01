@@ -28,35 +28,42 @@ export default function ModerationPage() {
     let cancelled = false;
 
     const checkAdmin = async () => {
-      const { data: auth, error: authError } = await supabase.auth.getUser();
-      if (authError) {
-        if (!cancelled) setError(authError.message);
-        return;
+      try {
+        const { data: auth, error: authError } = await supabase.auth.getUser();
+
+        if (!auth?.user) {
+          router.replace("/login");
+          return;
+        }
+
+        if (authError) {
+          console.warn("supabase getUser error:", authError);
+        }
+
+        const { data: currentUser, error: userError } = await supabase
+          .from("users")
+          .select("is_admin")
+          .eq("id", auth.user.id)
+          .single();
+
+        if (userError) {
+          if (!cancelled) setError(userError.message);
+          return;
+        }
+
+        if (!currentUser?.is_admin) {
+          alert("You are not authorized to access this page.");
+          router.replace("/");
+          return;
+        }
+
+        if (!cancelled) setCheckingAdmin(false);
+      } catch (err) {
+        if (!cancelled) {
+          console.warn("Failed to verify admin session:", err);
+          router.replace("/login");
+        }
       }
-
-      if (!auth.user) {
-        router.push("/login");
-        return;
-      }
-
-      const { data: currentUser, error: userError } = await supabase
-        .from("users")
-        .select("is_admin")
-        .eq("id", auth.user.id)
-        .single();
-
-      if (userError) {
-        if (!cancelled) setError(userError.message);
-        return;
-      }
-
-      if (!currentUser?.is_admin) {
-        alert("You are not authorized to access this page.");
-        router.push("/");
-        return;
-      }
-
-      if (!cancelled) setCheckingAdmin(false);
     };
 
     void checkAdmin();
@@ -65,7 +72,6 @@ export default function ModerationPage() {
       cancelled = true;
     };
   }, [router, supabase]);
-
 
   const fetchPending = useCallback(async () => {
     setLoading(true);
@@ -226,3 +232,5 @@ export default function ModerationPage() {
     </>
   );
 }
+
+
