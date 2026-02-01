@@ -2,9 +2,9 @@
 // Tries to read NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY from process.env,
 // or falls back to .env.local in the project root.
 
-const fs = require("fs");
-const path = require("path");
-const { createClient } = require("@supabase/supabase-js");
+import fs from "fs";
+import path from "path";
+import { createClient } from "@supabase/supabase-js";
 
 function loadEnvLocalIfNeeded() {
   if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) return;
@@ -161,8 +161,6 @@ async function main() {
   console.log("Tags inserted:", Object.keys(tagMap).join(", "));
 
   const now = Date.now();
-  const targetTitles = seedQuestions.map(q => q.title);
-
   // Avoid duplicating questions on repeated runs by skipping existing titles.
   const { data: existingQs, error: existingQError } = await supabase
     .from("questions")

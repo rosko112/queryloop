@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -24,7 +24,7 @@ interface Question {
 }
 
 export default function AdminPage() {
-  const supabase = createClientComponentClient();
+  const supabase = useMemo(() => createClientComponentClient(), []);
   const router = useRouter();
 
   const [users, setUsers] = useState<User[]>([]);
@@ -38,29 +38,31 @@ export default function AdminPage() {
   const pageSize = 10;
   const questionPageSize = 10;
 
+  const checkAdmin = useCallback(async () => {
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return router.push("/login");
+
+    const { data: currentUser } = await supabase
+      .from("users")
+      .select("is_admin")
+      .eq("id", auth.user.id)
+      .single();
+
+    if (!currentUser?.is_admin) {
+      alert("You are not authorized to access this page.");
+      return router.push("/");
+    }
+
+    setCheckingAdmin(false);
+  }, [router, supabase]);
+
   useEffect(() => {
-    const checkAdmin = async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) return router.push("/login");
+    queueMicrotask(() => {
+      void checkAdmin();
+    });
+  }, [checkAdmin]);
 
-      const { data: currentUser } = await supabase
-        .from("users")
-        .select("is_admin")
-        .eq("id", auth.user.id)
-        .single();
-
-      if (!currentUser?.is_admin) {
-        alert("You are not authorized to access this page.");
-        return router.push("/");
-      }
-
-      setCheckingAdmin(false);
-    };
-
-    checkAdmin();
-  }, []);
-
-  const fetchUsers = async (page: number) => {
+  const fetchUsers = useCallback(async (page: number) => {
     setUsersLoading(true);
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
@@ -80,11 +82,15 @@ export default function AdminPage() {
       if (typeof count === "number") setUserTotal(count);
     }
     setUsersLoading(false);
-  };
+  }, [pageSize, supabase]);
 
   useEffect(() => {
-    if (!checkingAdmin) fetchUsers(userPage);
-  }, [checkingAdmin, userPage]);
+    if (!checkingAdmin) {
+      queueMicrotask(() => {
+        void fetchUsers(userPage);
+      });
+    }
+  }, [checkingAdmin, fetchUsers, userPage]);
 
   useEffect(() => {
     const fetchQuestions = async () => {
@@ -106,38 +112,42 @@ export default function AdminPage() {
         if (typeof count === "number") setQuestionTotal(count);
       }
     };
-    if (!checkingAdmin) fetchQuestions();
+    if (!checkingAdmin) {
+      queueMicrotask(() => {
+        void fetchQuestions();
+      });
+    }
   }, [checkingAdmin, supabase, questionPage]);
 
   const handleDelete = async (id: string) => {
-  if (!confirm("Are you sure you want to permanently delete this user?")) return;
+    if (!confirm("Are you sure you want to permanently delete this user?")) return;
 
-  const res = await fetch("/api/admin/users", {
-    method: "POST",
-    body: JSON.stringify({ action: "delete", userId: id }),
-    headers: { "Content-Type": "application/json" },
-  });
+    const res = await fetch("/api/admin/users", {
+      method: "POST",
+      body: JSON.stringify({ action: "delete", userId: id }),
+      headers: { "Content-Type": "application/json" },
+    });
 
-  const data = await res.json();
-  if (data.error) return alert("Error: " + data.error);
+    const data = await res.json();
+    if (data.error) return alert("Error: " + data.error);
 
-  alert("User deleted successfully!");
-  fetchUsers(userPage);
-};
+    alert("User deleted successfully!");
+    void fetchUsers(userPage);
+  };
 
-const toggleAdmin = async (id: string, is_admin: boolean) => {
-  const res = await fetch("/api/admin/users", {
-    method: "POST",
-    body: JSON.stringify({ action: "toggleAdmin", userId: id }),
-    headers: { "Content-Type": "application/json" },
-  });
+  const toggleAdmin = async (id: string) => {
+    const res = await fetch("/api/admin/users", {
+      method: "POST",
+      body: JSON.stringify({ action: "toggleAdmin", userId: id }),
+      headers: { "Content-Type": "application/json" },
+    });
 
-  const data = await res.json();
-  if (data.error) return alert("Error: " + data.error);
+    const data = await res.json();
+    if (data.error) return alert("Error: " + data.error);
 
-  alert("Admin status updated!");
-  fetchUsers(userPage);
-};
+    alert("Admin status updated!");
+    void fetchUsers(userPage);
+  };
 
   if (checkingAdmin || (usersLoading && users.length === 0)) return <AdminSkeleton />;
 
@@ -189,7 +199,7 @@ const toggleAdmin = async (id: string, is_admin: boolean) => {
                     <td className="border border-slate-700 px-4 py-2 text-slate-200">{new Date(u.created_at).toLocaleDateString()}</td>
                     <td className="border border-slate-700 px-4 py-2 flex gap-2">
                       <button
-                        onClick={() => toggleAdmin(u.id, u.is_admin)}
+                        onClick={() => toggleAdmin(u.id)}
                         className="px-3 py-1 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition text-sm"
                       >
                         {u.is_admin ? "Remove Admin" : "Make Admin"}

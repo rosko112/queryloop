@@ -6,9 +6,15 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+interface AdminQuestionBody {
+  action?: "delete" | "edit";
+  questionId?: string;
+  newTitle?: string;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = (await req.json()) as AdminQuestionBody;
     const { action, questionId, newTitle } = body;
 
     if (!action || !questionId) {
@@ -32,7 +38,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Server error.";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

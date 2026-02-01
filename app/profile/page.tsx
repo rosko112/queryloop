@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
 import Header from "@/app/components/Header";
@@ -39,7 +39,7 @@ interface FavoriteQuestion {
 }
 
 export default function ProfilePage() {
-  const supabase = createClientComponentClient();
+  const supabase = useMemo(() => createClientComponentClient(), []);
   const router = useRouter();
 
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -63,25 +63,25 @@ export default function ProfilePage() {
   const aTotalPages = Math.max(1, Math.ceil(aTotal / pageSize));
   const fTotalPages = Math.max(1, Math.ceil(fTotal / pageSize));
 
+  const fetchProfile = useCallback(async () => {
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return router.push("/login");
+
+    const { data } = await supabase
+      .from("users")
+      .select("id, username, email, display_name, bio, reputation, created_at, is_admin")
+      .eq("id", auth.user.id)
+      .single();
+
+    if (data) setUser(data);
+    setLoading(false);
+  }, [router, supabase]);
+
   useEffect(() => {
-    const fetchProfile = async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) return router.push("/login");
+    void fetchProfile();
+  }, [fetchProfile]);
 
-      const { data } = await supabase
-        .from("users")
-        .select("id, username, email, display_name, bio, reputation, created_at, is_admin")
-        .eq("id", auth.user.id)
-        .single();
-
-      if (data) setUser(data);
-      setLoading(false);
-    };
-
-    fetchProfile();
-  }, [supabase, router]);
-
-  const fetchQuestions = async (page: number, userId: string) => {
+  const fetchQuestions = useCallback(async (page: number, userId: string) => {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
     const { data, count } = await supabase
@@ -92,9 +92,9 @@ export default function ProfilePage() {
       .range(from, to);
     if (data) setQuestions(data);
     if (typeof count === "number") setQTotal(count);
-  };
+  }, [pageSize, supabase]);
 
-  const fetchAnswers = async (page: number, userId: string) => {
+  const fetchAnswers = useCallback(async (page: number, userId: string) => {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
     const { data, count } = await supabase
@@ -106,7 +106,7 @@ export default function ProfilePage() {
 
     if (data) {
       const questionIds = Array.from(new Set(data.map(a => a.question_id)));
-      let titleMap: Record<string, string> = {};
+      const titleMap: Record<string, string> = {};
       if (questionIds.length > 0) {
         const { data: questionsRows } = await supabase
           .from("questions")
@@ -124,9 +124,9 @@ export default function ProfilePage() {
       );
     }
     if (typeof count === "number") setATotal(count);
-  };
+  }, [pageSize, supabase]);
 
-  const fetchFavorites = async (page: number, userId: string) => {
+  const fetchFavorites = useCallback(async (page: number, userId: string) => {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
     const { data, count } = await supabase
@@ -152,22 +152,22 @@ export default function ProfilePage() {
 
     setFavorites(favs);
     if (typeof count === "number") setFTotal(count);
-  };
+  }, [pageSize, supabase]);
 
   useEffect(() => {
     if (!user) return;
-    fetchQuestions(qPage, user.id);
-  }, [user, qPage]);
+    void fetchQuestions(qPage, user.id);
+  }, [fetchQuestions, qPage, user]);
 
   useEffect(() => {
     if (!user) return;
-    fetchAnswers(aPage, user.id);
-  }, [user, aPage]);
+    void fetchAnswers(aPage, user.id);
+  }, [aPage, fetchAnswers, user]);
 
   useEffect(() => {
     if (!user) return;
-    fetchFavorites(fPage, user.id);
-  }, [user, fPage]);
+    void fetchFavorites(fPage, user.id);
+  }, [fPage, fetchFavorites, user]);
 
   const Pagination = ({
     current,
@@ -220,8 +220,9 @@ export default function ProfilePage() {
       setPasswordMessage("Password updated successfully.");
       setPassword("");
       setPasswordConfirm("");
-    } catch (err: any) {
-      setPasswordError(err.message || "Failed to update password.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to update password.";
+      setPasswordError(message);
     }
   };
 

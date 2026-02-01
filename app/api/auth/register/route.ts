@@ -4,7 +4,11 @@ import bcrypt from "bcryptjs"; // install with npm i bcryptjs
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const body = (await req.json()) as {
+      username?: string;
+      email?: string;
+      password?: string;
+    };
     const { username, email, password } = body || {};
 
     if (!username || !email || !password) {
@@ -66,10 +70,8 @@ export async function POST(req: Request) {
       { user: createdUser.user, profile: profile?.[0] },
       { status: 201 }
     );
-  } catch (err: any) {
-    return NextResponse.json(
-      { error: err?.message || "server error" },
-      { status: 500 }
-    );
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "server error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

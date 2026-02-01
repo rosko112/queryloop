@@ -1,29 +1,18 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import Header from "@/app/components/Header";
+import Image from "next/image";
 
-interface Answer {
-  id: string;
-  question_id: string;
-  author_id: string;
-  body: string;
-  score: number;
-  is_accepted: boolean;
-  created_at: string;
-  updated_at: string;
-  username?: string;
-}
+const blobLoader = ({ src }: { src: string }) => src;
 
 export default function AnswerForm() {
-  const supabase = createClientComponentClient();
+  const supabase = useMemo(() => createClientComponentClient(), []);
   const router = useRouter();
   const params = useParams();
-  const questionId = params?.id;
-
-  const [answers, setAnswers] = useState<Answer[]>([]);
+  const questionId = params?.id as string | undefined;
   const [body, setBody] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
@@ -130,8 +119,9 @@ export default function AnswerForm() {
       }
       
       router.push(`/question/${questionId}`);
-    } catch (err: any) {
-      setError(err.message || "Failed to post answer.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to post answer.";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -209,9 +199,13 @@ export default function AnswerForm() {
                       
                       return (
                         <div key={index} className="relative group">
-                          <img
+                          <Image
                             src={src}
                             alt={`preview-${index}`}
+                            width={128}
+                            height={128}
+                            loader={blobLoader}
+                            unoptimized
                             className={`w-32 h-32 object-cover rounded-md border shadow-sm ${
                               isHeicFile ? 'opacity-50 border-2 border-red-500' : ''
                             }`}

@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import Header from "@/app/components/Header";
 import QuestionSkeleton from "@/app/components/QuestionSkeleton";
+import Image from "next/image";
 
 interface Question {
   id: string;
@@ -52,8 +53,19 @@ interface Tag {
   name: string;
 }
 
+interface QuestionTagRow {
+  tags: Tag | null;
+}
+
+interface VoteRow {
+  target_id?: string;
+  answer_id?: string;
+  user_id: string;
+  value: number;
+}
+
 export default function QuestionPage() {
-  const supabase = createClientComponentClient();
+  const supabase = useMemo(() => createClientComponentClient(), []);
   const router = useRouter();
   const params = useParams();
   const rawQuestionId = params?.id;
@@ -113,7 +125,7 @@ export default function QuestionPage() {
     return () => newPreviews.forEach(url => URL.revokeObjectURL(url));
   }, [answerFiles]);
 
-  const fetchQuestionAndAnswers = async () => {
+  const fetchQuestionAndAnswers = useCallback(async () => {
     if (!questionId) return;
 
     setLoading(true);
@@ -125,16 +137,16 @@ export default function QuestionPage() {
       const viewerId = authData.user?.id || null;
       setCurrentUserId(viewerId);
 
+      let isAdmin = false;
       if (viewerId) {
         const { data: viewerProfile } = await supabase
           .from("users")
           .select("is_admin")
           .eq("id", viewerId)
           .maybeSingle();
-        setCurrentUserIsAdmin(!!viewerProfile?.is_admin);
-      } else {
-        setCurrentUserIsAdmin(false);
+        isAdmin = !!viewerProfile?.is_admin;
       }
+      setCurrentUserIsAdmin(isAdmin);
 
       // Fetch question
       const { data: qData, error: qError } = await supabase
@@ -149,7 +161,7 @@ export default function QuestionPage() {
       }
       setQuestion(qData);
 
-      if (!qData.is_public && !currentUserIsAdmin && qData.author_id !== viewerId) {
+      if (!qData.is_public && !isAdmin && qData.author_id !== viewerId) {
         setError("This question is awaiting moderation.");
         setQuestion(null);
         setLoading(false);
@@ -198,7 +210,8 @@ export default function QuestionPage() {
         .select(`tags(id, name)`)
         .eq("question_id", questionId);
       if (tagError) throw tagError;
-      setQuestionTags(tagsData?.map((qt: any) => qt.tags) || []);
+      const mappedTags = (tagsData ?? []) as unknown as QuestionTagRow[];
+      setQuestionTags(mappedTags.map(qt => qt.tags).filter(Boolean) as Tag[]);
 
       // Fetch question attachments
       const { data: questionAttachmentsData, error: questionAttachmentsError } = await supabase
@@ -256,8 +269,9 @@ export default function QuestionPage() {
         const userVoteMap: Record<string, 1 | -1 | 0> = {};
         const upMap: Record<string, number> = {};
         const downMap: Record<string, number> = {};
-        (aVotes || []).forEach(v => {
-          const voteAnswerId = (v as any).answer_id || (v as any).target_id;
+        (aVotes as VoteRow[] | null)?.forEach(v => {
+          const voteAnswerId = v.answer_id || v.target_id;
+          if (!voteAnswerId) return;
           scoreMap[voteAnswerId] = (scoreMap[voteAnswerId] || 0) + (v.value || 0);
           if (v.value === 1) upMap[voteAnswerId] = (upMap[voteAnswerId] || 0) + 1;
           if (v.value === -1) downMap[voteAnswerId] = (downMap[voteAnswerId] || 0) + 1;
@@ -283,16 +297,17 @@ export default function QuestionPage() {
       }));
 
       setAnswers(answersWithDetails);
-    } catch (err: any) {
-      setError(err.message || "Failed to load question.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to load question.";
+      setError(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [questionId, supabase]);
 
   useEffect(() => {
-    fetchQuestionAndAnswers();
-  }, [questionId]);
+    void fetchQuestionAndAnswers();
+  }, [fetchQuestionAndAnswers]);
 
   const handleAnswerFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
@@ -365,8 +380,9 @@ export default function QuestionPage() {
       setAnswerFiles([]);
       setAnswerPreviews([]);
       await fetchQuestionAndAnswers();
-    } catch (err: any) {
-      setAnswerError(err.message || "Failed to post answer.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to post answer.";
+      setAnswerError(message);
     } finally {
       setAnswerLoading(false);
     }
@@ -379,6 +395,14 @@ export default function QuestionPage() {
       return null;
     }
     return data.user;
+  };
+
+  const handleBackToQuestions = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.push("/question");
   };
 
   const handleQuestionVote = async (value: 1 | -1) => {
@@ -584,6 +608,15 @@ export default function QuestionPage() {
       <Header />
       <main className="pt-24 min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-slate-50">
         <section className="max-w-5xl mx-auto px-6 py-12">
+          <div className="flex justify-end mb-6">
+            <button
+              type="button"
+              onClick={handleBackToQuestions}
+              className="text-sm px-4 py-2 rounded-md bg-indigo-500 text-white border border-indigo-400/60 hover:bg-indigo-600 transition"
+            >
+              Back to questions
+            </button>
+          </div>
           <div className="bg-slate-800/70 rounded-xl shadow-lg p-10 border border-slate-700">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <h1 className="text-3xl font-bold text-white">{question.title}</h1>
@@ -686,9 +719,11 @@ export default function QuestionPage() {
                       rel="noreferrer"
                       className="group"
                     >
-                      <img
+                      <Image
                         src={getImageUrl(att.file_path)}
                         alt="Question attachment"
+                        width={128}
+                        height={128}
                         className="w-32 h-32 object-cover rounded-md border shadow-sm group-hover:shadow-md transition-shadow"
                       />
                     </a>
@@ -781,9 +816,11 @@ export default function QuestionPage() {
                               rel="noreferrer"
                               className="group"
                             >
-                              <img
+                              <Image
                                 src={getAnswerImageUrl(att.file_path)}
                                 alt="Answer attachment"
+                                width={112}
+                                height={112}
                                 className="w-28 h-28 object-cover rounded-md border shadow-sm group-hover:shadow-md transition-shadow"
                               />
                             </a>
@@ -856,9 +893,12 @@ export default function QuestionPage() {
 
                           return (
                             <div key={index} className="relative group">
-                              <img
+                              <Image
                                 src={src}
                                 alt={`preview-${index}`}
+                                width={112}
+                                height={112}
+                                unoptimized
                                 className={`w-28 h-28 object-cover rounded-md border shadow-sm ${
                                   isHeicFile ? "opacity-50 border-2 border-red-500" : ""
                                 }`}

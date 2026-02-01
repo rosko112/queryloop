@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import Header from "@/app/components/Header";
 import Link from "next/link";
@@ -16,18 +16,13 @@ interface Question {
   votes_score?: number;
 }
 
-interface User {
-  id: string;
-  username: string;
-}
-
 interface Tag {
   id: string;
   name: string;
 }
 
 function AllQuestionsPageContent() {
-  const supabase = createClientComponentClient();
+  const supabase = useMemo(() => createClientComponentClient(), []);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -38,7 +33,6 @@ function AllQuestionsPageContent() {
   const [searchTitle, setSearchTitle] = useState(searchParams.get("title") || "");
   const [filterTag, setFilterTag] = useState<string>(searchParams.get("tag") || "");
   const [sortByDate, setSortByDate] = useState<"asc" | "desc">("desc");
-  const [voteScores, setVoteScores] = useState<Record<string, number>>({});
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const pageSize = 10;
@@ -120,7 +114,7 @@ function AllQuestionsPageContent() {
           .select("question_id, tag_id (id, name)")
           .in("question_id", questionIds);
 
-        let scoreMap: Record<string, number> = {};
+        const scoreMap: Record<string, number> = {};
         if (questionIds.length > 0) {
           const { data: voteRows } = await supabase
             .from("votes")
@@ -131,7 +125,6 @@ function AllQuestionsPageContent() {
             scoreMap[v.target_id] = (scoreMap[v.target_id] || 0) + (v.value || 0);
           });
         }
-        setVoteScores(scoreMap);
 
         const questionsWithTags = questionsData.map(q => ({
           ...q,
@@ -167,27 +160,47 @@ function AllQuestionsPageContent() {
           </div>
 
           <div className="flex flex-wrap gap-4 mb-6">
-            <input
-              type="text"
-              placeholder="Search by title..."
-              value={searchTitle}
-              onChange={e => {
-                const value = e.target.value;
-                setSearchTitle(value);
-                setPage(1);
+            <div className="relative w-full md:w-1/3">
+              <input
+                type="text"
+                placeholder="Search by title..."
+                value={searchTitle}
+                onChange={e => {
+                  const value = e.target.value;
+                  setSearchTitle(value);
+                  setPage(1);
 
-                const params = new URLSearchParams(searchParams.toString());
-                if (value) {
-                  params.set("title", value);
-                } else {
-                  params.delete("title");
-                }
-                if (filterTag) params.set("tag", filterTag);
-                const query = params.toString();
-                router.replace(`/question${query ? `?${query}` : ""}`);
-              }}
-              className="px-4 py-2 w-full md:w-1/3 rounded-md border border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            />
+                  const params = new URLSearchParams(searchParams.toString());
+                  if (value) {
+                    params.set("title", value);
+                  } else {
+                    params.delete("title");
+                  }
+                  if (filterTag) params.set("tag", filterTag);
+                  const query = params.toString();
+                  router.replace(`/question${query ? `?${query}` : ""}`);
+                }}
+                className="px-4 py-2 w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              />
+              {searchTitle && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchTitle("");
+                    setPage(1);
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.delete("title");
+                    if (filterTag) params.set("tag", filterTag);
+                    const query = params.toString();
+                    router.replace(`/question${query ? `?${query}` : ""}`);
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition"
+                  aria-label="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
 
             <select
               value={filterTag}

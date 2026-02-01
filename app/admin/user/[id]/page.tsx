@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import Header from "@/app/components/Header";
@@ -28,10 +28,10 @@ interface User {
 }
 
 export default function UserDetailPage() {
-  const supabase = createClientComponentClient();
+  const supabase = useMemo(() => createClientComponentClient(), []);
   const router = useRouter();
   const params = useParams();
-  const userId = params.id;
+  const userId = params.id as string;
 
   const [user, setUser] = useState<User | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -44,7 +44,7 @@ export default function UserDetailPage() {
   const pageSize = 10;
 
   // Fetch user info and posts
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     const { data: userData } = await supabase
       .from("users")
       .select("id, username, email")
@@ -77,7 +77,7 @@ export default function UserDetailPage() {
       .range(fromA, toA);
 
     const qIds = userAnswers?.map(a => a.question_id) || [];
-    let titleMap: Record<string, string> = {};
+    const titleMap: Record<string, string> = {};
     if (qIds.length > 0) {
       const { data: qRows } = await supabase
         .from("questions")
@@ -95,11 +95,13 @@ export default function UserDetailPage() {
     );
     if (typeof aCount === "number") setATotal(aCount);
     setLoading(false);
-  };
+  }, [aPage, pageSize, qPage, supabase, userId]);
 
   useEffect(() => {
-    fetchUserData();
-  }, [userId, qPage, aPage]);
+    queueMicrotask(() => {
+      void fetchUserData();
+    });
+  }, [fetchUserData]);
 
   // Delete a question
   const handleDeleteQuestion = async (id: string) => {
@@ -116,7 +118,7 @@ export default function UserDetailPage() {
     if (data.error) return alert("Error: " + data.error);
 
     alert("Question deleted successfully!");
-    fetchUserData();
+    void fetchUserData();
   };
 
   // Edit question title
@@ -134,7 +136,7 @@ export default function UserDetailPage() {
     if (data.error) return alert("Error: " + data.error);
 
     alert("Question updated!");
-    fetchUserData();
+    void fetchUserData();
   };
 
   if (loading) return <AdminUserSkeleton />;
@@ -151,7 +153,8 @@ export default function UserDetailPage() {
       <main className="pt-24 min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
         <section className="max-w-6xl mx-auto px-6 py-12">
           <h1 className="text-3xl font-extrabold text-indigo-600 mb-4">
-            {user.username}'s Posts
+            {user.username}
+            {"'"}s Posts
           </h1>
           <p className="text-slate-600 mb-6">Email: {user.email}</p>
 

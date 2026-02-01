@@ -9,7 +9,10 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: Request) {
   try {
-    const { email, password } = await req.json();
+    const { email, password } = (await req.json()) as {
+      email?: string;
+      password?: string;
+    };
 
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password required" }, { status: 400 });
@@ -27,7 +30,7 @@ export async function POST(req: Request) {
     }
 
     // Compare provided password with hashed password
-    const isValid = await bcrypt.compare(password, user.password);
+    const isValid = await bcrypt.compare(password, user.password as string);
     if (!isValid) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
@@ -41,7 +44,8 @@ export async function POST(req: Request) {
         email: user.email,
       },
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err?.message || "Server error" }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Server error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
