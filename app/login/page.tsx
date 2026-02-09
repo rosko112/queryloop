@@ -8,8 +8,10 @@ import Header from "@/app/components/Header";
 
 export default function LoginPage() {
   const router = useRouter();
+  // Supabase klient za prijavo.
   const supabase = useMemo(() => createClientComponentClient(), []);
 
+  // Stanje obrazca in napak.
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -18,6 +20,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // Povratni URL za OAuth.
   const getRedirectUrl = () => {
     const base =
       process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
@@ -26,6 +29,7 @@ export default function LoginPage() {
   };
 
   useEffect(() => {
+    // Če je uporabnik že prijavljen, ga preusmeri na domačo stran.
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
@@ -39,6 +43,7 @@ export default function LoginPage() {
   const canSubmit = isValidEmail && password.length >= 6;
   const formSubmitDisabled = !canSubmit || loading || oauthLoading;
 
+  // Prijava z e-pošto in geslom.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -87,6 +92,7 @@ export default function LoginPage() {
     }
   };
 
+  // Prijava prek Google OAuth.
   const handleGoogleSignIn = async () => {
     setError(null);
     setSuccess(null);

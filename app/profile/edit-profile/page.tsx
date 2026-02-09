@@ -13,9 +13,11 @@ interface UserProfile {
 }
 
 export default function EditProfilePage() {
+  // Supabase klient in router za urejanje profila.
   const supabase = useMemo(() => createClientComponentClient(), []);
   const router = useRouter();
 
+  // Stanje profila in obrazca.
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -23,6 +25,7 @@ export default function EditProfilePage() {
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
 
+  // Naloži podatke profila.
   const fetchProfile = useCallback(async () => {
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) return router.push("/login");
@@ -48,6 +51,7 @@ export default function EditProfilePage() {
     });
   }, [fetchProfile]);
 
+  // Shrani posodobitve profila.
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);

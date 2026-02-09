@@ -39,9 +39,11 @@ interface FavoriteQuestion {
 }
 
 export default function ProfilePage() {
+  // Supabase klient in router za profil.
   const supabase = useMemo(() => createClientComponentClient(), []);
   const router = useRouter();
 
+  // Stanje profila in vsebin uporabnika.
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [questions, setQuestions] = useState<UserQuestion[]>([]);
@@ -63,6 +65,7 @@ export default function ProfilePage() {
   const aTotalPages = Math.max(1, Math.ceil(aTotal / pageSize));
   const fTotalPages = Math.max(1, Math.ceil(fTotal / pageSize));
 
+  // Naloži profil prijavljenega uporabnika.
   const fetchProfile = useCallback(async () => {
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) return router.push("/login");
@@ -81,6 +84,7 @@ export default function ProfilePage() {
     void fetchProfile();
   }, [fetchProfile]);
 
+  // Naloži uporabnikova vprašanja.
   const fetchQuestions = useCallback(async (page: number, userId: string) => {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
@@ -94,6 +98,7 @@ export default function ProfilePage() {
     if (typeof count === "number") setQTotal(count);
   }, [pageSize, supabase]);
 
+  // Naloži uporabnikove odgovore + naslove vprašanj.
   const fetchAnswers = useCallback(async (page: number, userId: string) => {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
@@ -126,6 +131,7 @@ export default function ProfilePage() {
     if (typeof count === "number") setATotal(count);
   }, [pageSize, supabase]);
 
+  // Naloži priljubljena vprašanja.
   const fetchFavorites = useCallback(async (page: number, userId: string) => {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
@@ -169,6 +175,7 @@ export default function ProfilePage() {
     void fetchFavorites(fPage, user.id);
   }, [fPage, fetchFavorites, user]);
 
+  // Preprosta paginacija za sekcije.
   const Pagination = ({
     current,
     total,
@@ -204,6 +211,7 @@ export default function ProfilePage() {
     );
   };
 
+  // Posodobi geslo prijavljenega uporabnika.
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordMessage(null);
@@ -226,6 +234,7 @@ export default function ProfilePage() {
     }
   };
 
+  // Odjava uporabnika.
   const handleLogout = async () => {
     setLoggingOut(true);
     await supabase.auth.signOut();

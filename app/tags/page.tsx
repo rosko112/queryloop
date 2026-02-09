@@ -12,6 +12,7 @@ interface Tag {
 }
 
 export default function TagsPage() {
+  // Supabase klient za branje oznak.
   const supabase = createClientComponentClient();
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,6 +23,7 @@ export default function TagsPage() {
   const totalPages = Math.max(1, Math.ceil(total / pageSize || 1));
 
   useEffect(() => {
+    // Naloži oznake z iskanjem in paginacijo.
     const fetchTags = async () => {
       setLoading(true);
       const from = (page - 1) * pageSize;

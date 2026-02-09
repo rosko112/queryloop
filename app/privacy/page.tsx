@@ -6,6 +6,7 @@ export default function PrivacyPage() {
   return (
     <>
       <Header />
+      {/* Stran z osnovnimi informacijami o zasebnosti */}
       <main className="pt-24 min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-slate-50">
         <section className="max-w-5xl mx-auto px-6 py-12 space-y-6">
           <div className="bg-slate-800/70 border border-slate-700 rounded-2xl shadow-lg p-8">

@@ -25,7 +25,7 @@ export default function AskQuestionForm() {
   const maxTitleLength = 120;
   const maxFiles = 5;
 
-  // Check for HEIC files whenever files change
+  // Preveri HEIC datoteke ob vsaki spremembi priponk.
   useEffect(() => {
     const hasHeic = files.some(
       (file) =>
@@ -106,7 +106,7 @@ export default function AskQuestionForm() {
 
       const author_id = user.id;
 
-      // Insert question
+      // Vstavi vprašanje.
       const { data: questionData, error: questionError } = await supabase
         .from("questions")
         .insert({ title, body, author_id, is_public: false })
@@ -116,9 +116,9 @@ export default function AskQuestionForm() {
       if (questionError || !questionData) throw questionError;
       const questionId = questionData.id;
 
-      // Handle tags
+      // Obdelaj oznake.
       for (const tagName of tags) {
-        // Check if tag exists
+        // Preveri, ali oznaka že obstaja.
         const { data: existingTag } = await supabase
           .from("tags")
           .select("*")
@@ -128,7 +128,7 @@ export default function AskQuestionForm() {
         let tagId = existingTag?.id;
 
         if (!tagId) {
-          // Create new tag
+          // Ustvari novo oznako.
           const { data: newTag } = await supabase
             .from("tags")
             .insert({ name: tagName })
@@ -137,11 +137,11 @@ export default function AskQuestionForm() {
           tagId = newTag.id;
         }
 
-        // Link question to tag
+        // Poveži vprašanje z oznako.
         await supabase.from("questions_tags").insert({ question_id: questionId, tag_id: tagId });
       }
 
-      // Upload files
+      // Naloži priponke.
       if (files.length > 0) {
         for (const file of files) {
           const filePath = `${questionId}/${file.name}`;
@@ -264,7 +264,7 @@ export default function AskQuestionForm() {
                 </div>
               </div>
 
-              {/* Right column: attachments + submit */}
+              {/* Desni stolpec: priponke + oddaja */}
               <div className="flex flex-col gap-6">
                 <div>
                   <label className="block text-sm font-medium text-slate-200 mb-2">

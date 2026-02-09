@@ -24,9 +24,11 @@ interface Question {
 }
 
 export default function AdminPage() {
+  // Enkrat ustvari odjemalsko Supabase instanco.
   const supabase = useMemo(() => createClientComponentClient(), []);
   const router = useRouter();
 
+  // Podatki tabel + stanje UI-ja.
   const [users, setUsers] = useState<User[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
@@ -38,6 +40,7 @@ export default function AdminPage() {
   const pageSize = 10;
   const questionPageSize = 10;
 
+  // Varovalo: do strani smejo le admini.
   const checkAdmin = useCallback(async () => {
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) return router.push("/login");
@@ -57,11 +60,13 @@ export default function AdminPage() {
   }, [router, supabase]);
 
   useEffect(() => {
+    // Prestavi v mikro-nalogo, da se routing/hooks najprej umirijo.
     queueMicrotask(() => {
       void checkAdmin();
     });
   }, [checkAdmin]);
 
+  // Naloži uporabnike po straneh s številom vseh.
   const fetchUsers = useCallback(async (page: number) => {
     setUsersLoading(true);
     const from = (page - 1) * pageSize;
@@ -86,6 +91,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!checkingAdmin) {
+      // Ohraní tabelo uporabnikov usklajeno s trenutno stranjo.
       queueMicrotask(() => {
         void fetchUsers(userPage);
       });
@@ -113,12 +119,14 @@ export default function AdminPage() {
       }
     };
     if (!checkingAdmin) {
+      // Naloži zadnja vprašanja za moderacijo.
       queueMicrotask(() => {
         void fetchQuestions();
       });
     }
   }, [checkingAdmin, supabase, questionPage]);
 
+  // Admin akcija: izbriši uporabnika prek API-ja.
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to permanently delete this user?")) return;
 
@@ -135,6 +143,7 @@ export default function AdminPage() {
     void fetchUsers(userPage);
   };
 
+  // Admin akcija: preklopi admin vlogo prek API-ja.
   const toggleAdmin = async (id: string) => {
     const res = await fetch("/api/admin/users", {
       method: "POST",

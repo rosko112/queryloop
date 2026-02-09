@@ -39,7 +39,7 @@ function AllQuestionsPageContent() {
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
-  // Keep filter in sync with ?tag= query param so tag clicks from the homepage pre-filter this view.
+  // Sinhroniziraj filter z ?tag= parametrom, da kliki z domače strani pred-filtrirajo seznam.
   useEffect(() => {
     const tagParam = searchParams.get("tag") || "";
     if (tagParam !== filterTag) {
@@ -48,7 +48,7 @@ function AllQuestionsPageContent() {
     }
   }, [searchParams, filterTag]);
 
-  // Sync search title with ?title= query param
+  // Sinhroniziraj iskanje z ?title= parametrom.
   useEffect(() => {
     const titleParam = searchParams.get("title") || "";
     if (titleParam !== searchTitle) {
@@ -66,7 +66,7 @@ function AllQuestionsPageContent() {
   }, [supabase]);
 
   useEffect(() => {
-    // refetch when page changes
+    // Ponovno naloži podatke ob spremembi strani.
     const controller = new AbortController();
     const fetchPage = async () => {
       setLoading(true);

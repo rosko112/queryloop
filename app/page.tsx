@@ -22,9 +22,11 @@ interface Tag {
 }
 
 export default function HomePage() {
+  // Inicializacija Supabase in routerja na strani odjemalca.
   const supabase = useMemo(() => createClientComponentClient(), []);
   const router = useRouter();
 
+  // Stanje za prikaz vprašanj, oznak in iskanja.
   const [questions, setQuestions] = useState<(Question & { username?: string; tags?: Tag[] })[]>([]);
   const [loading, setLoading] = useState(true);
   const [tagLoading, setTagLoading] = useState(true);
@@ -32,6 +34,7 @@ export default function HomePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [featuredTags, setFeaturedTags] = useState<Tag[]>([]);
 
+  // Preusmeritev glede na prijavo ob kliku "Ask a question".
   const handleAskQuestion = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user?.id) {
@@ -41,11 +44,13 @@ export default function HomePage() {
     }
   };
 
+  // Preveri ali je uporabnik prijavljen.
   const fetchAuth = useCallback(async () => {
     const { data } = await supabase.auth.getUser();
     setIsLoggedIn(!!data.user);
   }, [supabase]);
 
+  // Naloži zadnja najboljša vprašanja z uporabniki, oznakami in glasovi.
   const fetchTopQuestions = useCallback(async () => {
     setLoading(true);
     try {
@@ -117,6 +122,7 @@ export default function HomePage() {
     }
   }, [supabase]);
 
+  // Naloži nekaj najbolj uporabljenih oznak.
   const fetchTags = useCallback(async () => {
     setTagLoading(true);
     try {
@@ -140,6 +146,7 @@ export default function HomePage() {
     void fetchTags();
   }, [fetchTags]);
 
+  // Preusmeri na seznam vprašanj z iskalnim filtrom.
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const term = searchTerm.trim();

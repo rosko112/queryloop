@@ -22,16 +22,19 @@ interface UserQuestion {
 }
 
 export default function PublicProfilePage() {
+  // Supabase klient in parameter iz URL-ja.
   const supabase = createClientComponentClient();
   const params = useParams();
   const username = params?.username as string | undefined;
 
+  // Stanje profila in vprašanj.
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [questions, setQuestions] = useState<UserQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Naloži javni profil in zadnja vprašanja uporabnika.
     const fetchProfile = async () => {
       if (!username) return;
       setLoading(true);
