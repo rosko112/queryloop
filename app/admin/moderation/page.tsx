@@ -15,9 +15,11 @@ interface PendingQuestion {
 }
 
 export default function ModerationPage() {
+  // Supabase klient in router za administracijo.
   const supabase = useMemo(() => createClientComponentClient(), []);
   const router = useRouter();
 
+  // Stanje za seznam čakajočih vprašanj.
   const [pending, setPending] = useState<PendingQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
@@ -27,6 +29,7 @@ export default function ModerationPage() {
   useEffect(() => {
     let cancelled = false;
 
+    // Preveri, ali je uporabnik admin.
     const checkAdmin = async () => {
       try {
         const { data: auth, error: authError } = await supabase.auth.getUser();
@@ -73,6 +76,7 @@ export default function ModerationPage() {
     };
   }, [router, supabase]);
 
+  // Naloži vprašanja, ki čakajo na odobritev.
   const fetchPending = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -103,6 +107,7 @@ export default function ModerationPage() {
     }
   }, [checkingAdmin, fetchPending]);
 
+  // Odobri vprašanje.
   const approve = async (questionId: string) => {
     setActioning(questionId);
     setError(null);
@@ -127,6 +132,7 @@ export default function ModerationPage() {
     }
   };
 
+  // Zavrni in izbriši vprašanje.
   const removeQuestion = async (questionId: string) => {
     setActioning(questionId);
     setError(null);

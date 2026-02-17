@@ -43,7 +43,7 @@ export default function UserDetailPage() {
   const [aTotal, setATotal] = useState(0);
   const pageSize = 10;
 
-  // Fetch user info and posts
+  // Naloži uporabnika in njegove objave.
   const fetchUserData = useCallback(async () => {
     const { data: userData } = await supabase
       .from("users")
@@ -103,7 +103,7 @@ export default function UserDetailPage() {
     });
   }, [fetchUserData]);
 
-  // Delete a question
+  // Izbriši vprašanje.
   const handleDeleteQuestion = async (id: string) => {
     const confirmDelete = confirm("Are you sure you want to delete this question?");
     if (!confirmDelete) return;
@@ -121,7 +121,7 @@ export default function UserDetailPage() {
     void fetchUserData();
   };
 
-  // Edit question title
+  // Uredi naslov vprašanja.
   const handleEditQuestion = async (id: string, currentTitle: string) => {
     const newTitle = prompt("Edit the question title:", currentTitle);
     if (!newTitle || newTitle.trim() === "") return;

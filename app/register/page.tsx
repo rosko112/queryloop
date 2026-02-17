@@ -8,8 +8,10 @@ import Header from "@/app/components/Header";
 
 export default function RegisterPage() {
   const router = useRouter();
+  // Supabase klient za registracijo.
   const supabase = useMemo(() => createClientComponentClient(), []);
 
+  // Stanje obrazca in napak.
   const [formData, setFormData] = useState({
     username: "",
     displayName: "",
@@ -24,6 +26,7 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // Povratni URL za OAuth.
   const getRedirectUrl = () => {
     const base =
       process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
@@ -32,6 +35,7 @@ export default function RegisterPage() {
   };
 
   useEffect(() => {
+    // Če je uporabnik že prijavljen, ga preusmeri.
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
@@ -57,6 +61,7 @@ export default function RegisterPage() {
     !loading;
   const formSubmitDisabled = !canSubmit || oauthLoading || loading;
 
+  // Posodabljanje polj obrazca.
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
@@ -65,6 +70,7 @@ export default function RegisterPage() {
     }));
   };
 
+  // Registracija z e-pošto in geslom.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -119,6 +125,7 @@ export default function RegisterPage() {
     }
   };
 
+  // Registracija prek Google OAuth.
   const handleGoogleSignup = async () => {
     setError(null);
     setSuccess(null);

@@ -21,7 +21,7 @@ export default function AnswerForm() {
   const [bodyError, setBodyError] = useState<string | null>(null);
   const [hasHeicFiles, setHasHeicFiles] = useState(false);
 
-  // Check for HEIC files whenever files change
+  // Preveri HEIC datoteke ob vsaki spremembi priponk.
   useEffect(() => {
     const hasHeic = files.some(file => 
       file.type === 'image/heic' || file.name.toLowerCase().endsWith('.heic')
@@ -29,7 +29,7 @@ export default function AnswerForm() {
     setHasHeicFiles(hasHeic);
   }, [files]);
 
-  // Preview images
+  // Predogledi slik.
   useEffect(() => {
     const newPreviews: string[] = [];
     files.forEach((file) => {
@@ -45,7 +45,7 @@ export default function AnswerForm() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
     
-    // Simply set the files without any conversion
+    // Datoteke samo shrani, brez pretvorbe.
     setFiles(Array.from(e.target.files));
   };
 
@@ -79,7 +79,7 @@ export default function AnswerForm() {
 
       const author_id = user.id;
 
-      // Insert answer
+      // Vstavi odgovor.
       const { data: answerData, error: answerError } = await supabase
         .from("answers")
         .insert({

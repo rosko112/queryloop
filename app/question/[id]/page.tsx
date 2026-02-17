@@ -104,7 +104,7 @@ export default function QuestionPage() {
   const getAnswerImageUrl = (filePath: string) =>
     `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/answer-files/${filePath}`;
 
-  // Track HEIC uploads for answers
+  // Sledi HEIC datotekam pri odgovoru.
   useEffect(() => {
     const hasHeic = answerFiles.some(
       file => file.type === "image/heic" || file.name.toLowerCase().endsWith(".heic")
@@ -112,7 +112,7 @@ export default function QuestionPage() {
     setAnswerHasHeic(hasHeic);
   }, [answerFiles]);
 
-  // Preview answer images
+  // Predogledi slik pri odgovoru.
   useEffect(() => {
     const newPreviews: string[] = [];
     answerFiles.forEach(file => {
@@ -132,7 +132,7 @@ export default function QuestionPage() {
     setError(null);
 
     try {
-      // Get current user info for permission checks
+      // Pridobi trenutno prijavljenega uporabnika za preverjanje dovoljenj.
       const { data: authData } = await supabase.auth.getUser();
       const viewerId = authData.user?.id || null;
       setCurrentUserId(viewerId);
@@ -148,7 +148,7 @@ export default function QuestionPage() {
       }
       setCurrentUserIsAdmin(isAdmin);
 
-      // Fetch question
+      // Naloži vprašanje.
       const { data: qData, error: qError } = await supabase
         .from("questions")
         .select("*")
@@ -168,7 +168,7 @@ export default function QuestionPage() {
         return;
       }
 
-      // Question votes
+      // Glasovi za vprašanje.
       const { data: qVotes } = await supabase
         .from("votes")
         .select("user_id, value")
@@ -187,7 +187,7 @@ export default function QuestionPage() {
         setQuestionUserVote(0);
       }
 
-      // Favorites
+      // Priljubljena.
       const { data: favs } = await supabase
         .from("favorites")
         .select("user_id")
@@ -195,7 +195,7 @@ export default function QuestionPage() {
       setFavoriteCount(favs?.length || 0);
       setIsFavorite(!!favs?.find(f => f.user_id === viewerId));
 
-      // Fetch author
+      // Naloži avtorja.
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select("id, username, display_name")
@@ -204,7 +204,7 @@ export default function QuestionPage() {
       if (userError) throw userError;
       setAuthor(userData || null);
 
-      // Fetch tags
+      // Naloži oznake.
       const { data: tagsData, error: tagError } = await supabase
         .from("questions_tags")
         .select(`tags(id, name)`)
@@ -213,7 +213,7 @@ export default function QuestionPage() {
       const mappedTags = (tagsData ?? []) as unknown as QuestionTagRow[];
       setQuestionTags(mappedTags.map(qt => qt.tags).filter(Boolean) as Tag[]);
 
-      // Fetch question attachments
+      // Naloži priponke vprašanja.
       const { data: questionAttachmentsData, error: questionAttachmentsError } = await supabase
         .from("question_attachments")
         .select("id, file_path, question_id")
@@ -221,7 +221,7 @@ export default function QuestionPage() {
       if (questionAttachmentsError) throw questionAttachmentsError;
       setQuestionAttachments(questionAttachmentsData || []);
 
-      // Fetch answers
+      // Naloži odgovore.
       const { data: answersData, error: answersError } = await supabase
         .from("answers")
         .select("*")
@@ -257,7 +257,7 @@ export default function QuestionPage() {
         usersMap[u.id] = u;
       });
 
-      // Answer votes
+      // Glasovi za odgovore.
       if (answerIds.length > 0) {
         const { data: aVotes } = await supabase
           .from("votes")
@@ -450,7 +450,7 @@ export default function QuestionPage() {
         }
       }
     } catch (err) {
-      // revert on error
+      // Ob napaki povrni optimistične spremembe.
       setQuestionUserVote(prevVote);
       setQuestionScore(prev => prev - nextVote + prevVote);
       setQuestionUpvotes(prev => prev - (nextVote === 1 ? 1 : 0) + (prevVote === 1 ? 1 : 0));
@@ -494,7 +494,7 @@ export default function QuestionPage() {
         });
       }
     } catch (err) {
-      // revert on error
+      // Ob napaki povrni optimistične spremembe.
       setAnswerUserVotes(prev => ({ ...prev, [answerId]: current }));
       setAnswerScores(prev => ({ ...prev, [answerId]: (prev[answerId] || 0) - nextVote + current }));
       setAnswerUpvotes(prev => ({
@@ -528,7 +528,7 @@ export default function QuestionPage() {
   const deleteQuestionCascade = async () => {
     if (!questionId) return;
 
-    // Delete question attachments from storage + db
+    // Izbriši priponke vprašanja iz shrambe in baze.
     const { data: qAtt } = await supabase
       .from("question_attachments")
       .select("file_path")
@@ -538,7 +538,7 @@ export default function QuestionPage() {
       await supabase.from("question_attachments").delete().eq("question_id", questionId);
     }
 
-    // Delete answers and their attachments
+    // Izbriši odgovore in njihove priponke.
     const { data: answersData } = await supabase
       .from("answers")
       .select("id")

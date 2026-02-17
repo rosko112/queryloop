@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 export default function AuthCallbackPage() {
+  // Zaključi OAuth prijavo in pripravi profil.
   const supabase = createClientComponentClient();
   const router = useRouter();
   const [status, setStatus] = useState("Finishing sign in...");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Po OAuth preveri sejo in po potrebi ustvari profil.
     const finishLogin = async () => {
       setStatus("Checking session...");
       const { data: sessionData } = await supabase.auth.getSession();
